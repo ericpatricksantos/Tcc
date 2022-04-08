@@ -88,11 +88,11 @@ func SaveAddrSimplificado(Addr Model.Endereco, ConnectionMongoDB string, DataBas
 	}
 }
 
-func SaveAddrSimplificadoEmPartes(Addr Model.Endereco, limit int,ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+func SaveAddrSimplificadoEmPartes(Addr Model.Endereco, limit int, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
 	if len(Addr.Address) > 0 && len(Addr.Txs) > 0 {
 		if len(Addr.Txs) <= limit {
-			return SaveAddrSimplificado(Addr,ConnectionMongoDB, DataBaseMongo, Collection)
-		}else{
+			return SaveAddrSimplificado(Addr, ConnectionMongoDB, DataBaseMongo, Collection)
+		} else {
 			var save_ate_2000 bool
 			var save_ate_4000 bool
 			var save_ate_5000 bool
@@ -100,20 +100,20 @@ func SaveAddrSimplificadoEmPartes(Addr Model.Endereco, limit int,ConnectionMongo
 			ate_2000 := Model.Endereco{
 				Hash160: Addr.Hash160,
 				Address: Addr.Address,
-				N_tx: Addr.N_tx,
-				Txs: []Model.Tx{},
+				N_tx:    Addr.N_tx,
+				Txs:     []Model.Tx{},
 			}
 			ate_4000 := Model.Endereco{
 				Hash160: Addr.Hash160,
 				Address: Addr.Address,
-				N_tx: Addr.N_tx,
-				Txs: []Model.Tx{},
+				N_tx:    Addr.N_tx,
+				Txs:     []Model.Tx{},
 			}
 			ate_5000 := Model.Endereco{
 				Hash160: Addr.Hash160,
 				Address: Addr.Address,
-				N_tx: Addr.N_tx,
-				Txs: []Model.Tx{},
+				N_tx:    Addr.N_tx,
+				Txs:     []Model.Tx{},
 			}
 			if tamanhoTxs <= 4000 {
 				for i := 0; i < 2000; i++ {
@@ -130,18 +130,18 @@ func SaveAddrSimplificadoEmPartes(Addr Model.Endereco, limit int,ConnectionMongo
 					return false
 				}
 
-				save_ate_2000 = SaveAddrSimplificado(ate_2000,ConnectionMongoDB, DataBaseMongo, Collection)
-				save_ate_4000 = SaveAddrSimplificado(ate_4000,ConnectionMongoDB, DataBaseMongo, Collection)
+				save_ate_2000 = SaveAddrSimplificado(ate_2000, ConnectionMongoDB, DataBaseMongo, Collection)
+				save_ate_4000 = SaveAddrSimplificado(ate_4000, ConnectionMongoDB, DataBaseMongo, Collection)
 				if save_ate_2000 && save_ate_4000 {
 					return true
-				}else{
+				} else {
 					return false
 				}
-			}else if tamanhoTxs <= 5000 {
+			} else if tamanhoTxs <= 5000 {
 				for i := 0; i < 2000; i++ {
 					ate_2000.Txs = append(ate_2000.Txs, Addr.Txs[i])
 				}
-				for k := 2000; k <  4000; k++ {
+				for k := 2000; k < 4000; k++ {
 					ate_4000.Txs = append(ate_4000.Txs, Addr.Txs[k])
 				}
 
@@ -155,20 +155,20 @@ func SaveAddrSimplificadoEmPartes(Addr Model.Endereco, limit int,ConnectionMongo
 					return false
 				}
 
-				save_ate_2000 = SaveAddrSimplificado(ate_2000,ConnectionMongoDB, DataBaseMongo, Collection)
-				save_ate_4000 = SaveAddrSimplificado(ate_4000,ConnectionMongoDB, DataBaseMongo, Collection)
-				save_ate_5000 = SaveAddrSimplificado(ate_5000,ConnectionMongoDB, DataBaseMongo, Collection)
+				save_ate_2000 = SaveAddrSimplificado(ate_2000, ConnectionMongoDB, DataBaseMongo, Collection)
+				save_ate_4000 = SaveAddrSimplificado(ate_4000, ConnectionMongoDB, DataBaseMongo, Collection)
+				save_ate_5000 = SaveAddrSimplificado(ate_5000, ConnectionMongoDB, DataBaseMongo, Collection)
 
-				if save_ate_2000 && save_ate_4000 && save_ate_5000{
+				if save_ate_2000 && save_ate_4000 && save_ate_5000 {
 					return true
-				}else{
+				} else {
 					return false
 				}
 			}
 			fmt.Println(" Txs é maior que 5000. Tamanho da txs: ", tamanhoTxs)
 			return false
 		}
-	}else{
+	} else {
 		return false
 	}
 }
@@ -191,7 +191,6 @@ func SaveAddrSimplificadoList(Addr []Model.Endereco, ConnectionMongoDB string, D
 		for _, item := range Addr {
 			documents = append(documents, item)
 		}
-
 
 		result, err := Database.InsertMany(cliente, contexto, DataBaseMongo, Collection, documents)
 		// handle the error
@@ -246,8 +245,8 @@ func GetAddr(endereco, urlAPI, RawAddr string) Model.UnicoEndereco {
 	return API.GetUnicoEndereco(endereco, urlAPI, RawAddr)
 }
 
-func GetEndereco(endereco, urlAPI, RawAddr string, limit ,offset int) Model.Endereco {
-	return API.GetEndereco(endereco, urlAPI, RawAddr, limit,offset)
+func GetEndereco(endereco, urlAPI, RawAddr string, limit, offset int) Model.Endereco {
+	return API.GetEndereco(endereco, urlAPI, RawAddr, limit, offset)
 }
 
 func GetAddrMongoDB(ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addr Model.UnicoEndereco) {
@@ -433,6 +432,115 @@ func GetAllAddr(ConnectionMongoDB string, DataBaseMongo string, CollectionRecupe
 			fmt.Println("Erro na resposta da função Decode que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
 			fmt.Println()
 
+			log.Fatal(err)
+		}
+
+		addrs = append(addrs, addr)
+
+	}
+
+	return addrs
+}
+
+func GetAllAddrLimit(limit int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
+
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Erro na resposta da função Connect - {Database/Mongo.go}  que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+		fmt.Println()
+
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter, option interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{}
+
+	//  option remove id field from all documents
+	option = bson.M{}
+
+	// call the query method with client, context,
+	// database name, collection  name, filter and option
+	// This method returns momngo.cursor and error if any.
+	cursor, err := Database.QueryLimit(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, filter, option)
+	// handle the errors.
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Erro na resposta da função Query - {Database/Mongo.go}  que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+		fmt.Println()
+
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var addr Model.Endereco
+
+		if err := cursor.Decode(&addr); err != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função Decode que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+			fmt.Println()
+
+			log.Fatal(err)
+		}
+
+		addrs = append(addrs, addr)
+
+	}
+
+	return addrs
+}
+
+func GetAddrsByAddress(addr, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
+
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Erro na resposta da função Connect - {Database/Mongo.go}  que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+		fmt.Println()
+
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	var filter, option interface{}
+
+	filter = bson.M{
+		"address": addr,
+	}
+
+	//  option remove id field from all documents
+	option = bson.M{}
+
+	cursor, err := Database.QueryLimit(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, 10000000000000000, filter, option)
+	// handle the errors.
+	if err != nil {
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var addr Model.Endereco
+
+		if err := cursor.Decode(&addr); err != nil {
 			log.Fatal(err)
 		}
 
@@ -842,32 +950,32 @@ func GetAllMultiAddr(ConnectionMongoDB string, DataBaseMongo string, CollectionR
 
 	return multiAddrs
 }
-func UltimoValor(valorReal int, dividendo float32) int{
+func UltimoValor(valorReal int, dividendo float32) int {
 	valorRealFracionario := float32(valorReal) / dividendo
 	valorRealInteiro := valorReal / int(dividendo)
 	resultadoParcial := valorRealFracionario - float32(valorRealInteiro)
-	resultado := int(resultadoParcial * dividendo) + 1
+	resultado := int(resultadoParcial*dividendo) + 1
 	return resultado
 }
-func DividiTransacoesDosEndereco(respostaCompleta Model.Endereco, qtdDivisoes float32) (resultado []Model.Endereco){
+func DividiTransacoesDosEndereco(respostaCompleta Model.Endereco, qtdDivisoes float32) (resultado []Model.Endereco) {
 	tamanho := len(respostaCompleta.Txs)
 	ultimoValor := UltimoValor(tamanho, qtdDivisoes)
-	if  tamanho <= int(qtdDivisoes) {
+	if tamanho <= int(qtdDivisoes) {
 		resultado = append(resultado, respostaCompleta)
-	}else{
+	} else {
 		temp := Model.Endereco{
 			Hash160: respostaCompleta.Hash160,
 			Address: respostaCompleta.Address,
-			N_tx: respostaCompleta.N_tx,
+			N_tx:    respostaCompleta.N_tx,
 		}
 		for indice, item := range respostaCompleta.Txs {
 			temp.Txs = append(temp.Txs, item)
 
 			if len(temp.Txs) == int(qtdDivisoes) {
-				resultado = append(resultado,temp )
+				resultado = append(resultado, temp)
 				temp.Txs = nil
-			}else if len(temp.Txs) == ultimoValor && indice == tamanho - 1  {
-				resultado = append(resultado,temp )
+			} else if len(temp.Txs) == ultimoValor && indice == tamanho-1 {
+				resultado = append(resultado, temp)
 				temp.Txs = nil
 			}
 		}

@@ -1,12 +1,12 @@
 package Function
 
 import (
+	"Tcc/Shared/Database"
+	"Tcc/Shared/Model"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
 	"log"
-	"Tcc/Shared/Database"
-	"Tcc/Shared/Model"
 	"time"
 )
 
@@ -112,6 +112,7 @@ func GetAllClusterLimit(limit int64, ConnectionMongoDB string, DataBaseMongo str
 	}
 	return Clusters
 }
+
 func GetAllClusterLimitOffset(limit int64, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []Model.Cluster) {
 	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
 	if err != nil {

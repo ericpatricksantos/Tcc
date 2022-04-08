@@ -8,10 +8,10 @@ import (
 )
 
 func main() {
-	BuscaEnderecosD1()
+	TesteDistancia()
 }
 
-func ProcessAdressesAnalysis_v2(){
+func ProcessAdressesAnalysis_v2() {
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 	AwaitingProcessing := "FaraoEnderecos"
 	AwaitingProcessingEnderecosEmAnalise := "Farao"
@@ -31,14 +31,14 @@ func ProcessAdressesAnalysis_v2(){
 	}
 }
 
-func TesteDistancia1(){
+func TesteDistancia1Informacoes() {
 	inputs := []string{}
 	txs := []string{}
 	enderecos := Function.GetAllAddr("mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
-		"Endereco","Farao")
+		"Endereco", "Farao")
 
-	for _, endereco := range enderecos{
-		for _, tx := range endereco.Txs{
+	for _, endereco := range enderecos {
+		for _, tx := range endereco.Txs {
 			txs = append(txs, tx.Hash)
 			for _, input := range tx.Inputs {
 				inputs = append(inputs, input.Prev_Out.Addr)
@@ -46,38 +46,37 @@ func TesteDistancia1(){
 		}
 	}
 
-	inputUnicos,_ := Function.RemoveDuplicados(inputs)
+	inputUnicos, _ := Function.RemoveDuplicados(inputs)
 	txsUnicos, _ := Function.RemoveDuplicados(txs)
-
 
 	info := Model.Informacoes{
 		InfoEnderecos: Model.InfoEnderecos{
-			Enderecos: inputUnicos,
+			Enderecos:    inputUnicos,
 			QtdEnderecos: len(inputUnicos),
 		},
 		InfoTransacoes: Model.InfoTransacoes{
-			Transacoes: txsUnicos,
+			Transacoes:    txsUnicos,
 			QtdTransacoes: len(txsUnicos),
 		},
 	}
 
 	Function.SaveInfo(info, "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
-		"Endereco","Distancia1Informacoes")
+		"Endereco", "Distancia1Informacoes")
 }
 
-func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
+func BuscaEnderecosDistancia1_Dividindo_Transacoes() {
 	encerraExecucao := false
 	urlAPI := "https://blockchain.info"
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 	Database := "Endereco"
-	infoDistancia1 := Function.GetInfoMongoDB( ConnectionMongoDB,
-		Database,"Distancia1Informacoes")
+	infoDistancia1 := Function.GetInfoMongoDB(ConnectionMongoDB,
+		Database, "Distancia1Informacoes")
 	enderecos := infoDistancia1.InfoEnderecos.Enderecos
 	tamanhoEnderecos := len(enderecos)
 	indiceInicial := Function.BuscaIndice("indice_lista_enderecos.txt")
 	tempo := 5
 
-	for indice := indiceInicial ; indice < tamanhoEnderecos; indice++{
+	for indice := indiceInicial; indice < tamanhoEnderecos; indice++ {
 
 		if encerraExecucao {
 			break
@@ -91,7 +90,7 @@ func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
 		endereco := enderecos[indice]
 		fmt.Println("Indice: ", indice)
 		fmt.Println("Buscando o endereco: ", endereco)
-		resposta := Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 1000,0)
+		resposta := Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 1000, 0)
 
 		if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 			fmt.Println(" Erro no retorno das informações do endereço: ", endereco)
@@ -105,16 +104,16 @@ func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
 			if encerraExecucao {
 				break
 			}
-			tamanhoTxsRecebidas =  tamanhoTxsRecebidas + len(respostaCompleta.Txs)
+			tamanhoTxsRecebidas = tamanhoTxsRecebidas + len(respostaCompleta.Txs)
 			contSalve := 0
-			if  tamanhoTxsRecebidas == N_tx{
+			if tamanhoTxsRecebidas == N_tx {
 				listaEnderecos := Function.DividiTransacoesDosEndereco(respostaCompleta, 1000.0)
 				if listaEnderecos == nil || len(listaEnderecos) == 0 {
 					encerraExecucao = true
 					break
 				}
-				tamanholistaEnderecos:= len(listaEnderecos)
-				fmt.Println("Salvando o Endereco: ", endereco," no MongoDB ")
+				tamanholistaEnderecos := len(listaEnderecos)
+				fmt.Println("Salvando o Endereco: ", endereco, " no MongoDB ")
 				fmt.Println(" Tamanho da lista total de transações: ", N_tx)
 				fmt.Println("Tamanho da lista que contem todas as transações do ", endereco, " e ", tamanholistaEnderecos)
 				for _, list_end := range listaEnderecos {
@@ -125,8 +124,8 @@ func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
 					}
 					if contSalve == tamanholistaEnderecos {
 						fmt.Println("Endereco Salvo ", endereco)
-						Function.IncrementaIndice(indice,"indice_lista_enderecos.txt")
-					} else if !confirmSalve{
+						Function.IncrementaIndice(indice, "indice_lista_enderecos.txt")
+					} else if !confirmSalve {
 						fmt.Println("Falha ao salva endereco ", endereco)
 						encerraExecucao = true
 						break
@@ -135,15 +134,15 @@ func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
 				if contSalve == tamanholistaEnderecos {
 					break
 				}
-			}else {
+			} else {
 				time.Sleep(time.Second * time.Duration(tempo))
-				resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 1000,tamanhoTxsRecebidas)
+				resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 1000, tamanhoTxsRecebidas)
 				if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 					fmt.Println(" Nao buscou os restantes da transações")
 					encerraExecucao = true
 					break
 				}
-				respostaCompleta.Txs = append(respostaCompleta.Txs, resposta.Txs ...)
+				respostaCompleta.Txs = append(respostaCompleta.Txs, resposta.Txs...)
 			}
 
 		}
@@ -152,7 +151,8 @@ func BuscaEnderecosDistancia1_Dividindo_Transacoes(){
 
 }
 
-func BuscaEnderecosD1(){
+// Sendo usado atualmente
+func BuscaEnderecosD1() {
 	utiliza_multiaddr := false
 	limit := 5000
 	encerraExecucao := false
@@ -168,7 +168,7 @@ func BuscaEnderecosD1(){
 	indiceInicial := Function.BuscaIndice("indice_lista_enderecos.txt")
 	tempo := 10
 
-	for indice := indiceInicial ; indice < tamanhoEnderecos; indice++{
+	for indice := indiceInicial; indice < tamanhoEnderecos; indice++ {
 
 		if encerraExecucao {
 			break
@@ -189,18 +189,18 @@ func BuscaEnderecosD1(){
 
 		if offsetTxsSalvas == 0 {
 			tamanhoTxsRecebidas = 0
-		}else {
+		} else {
 			tamanhoTxsRecebidas = offsetTxsSalvas
 		}
 		if !utiliza_multiaddr {
 			fmt.Println("RawAddr")
-			resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", limit,tamanhoTxsRecebidas)
+			resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", limit, tamanhoTxsRecebidas)
 		}
 		if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 			utiliza_multiaddr = true
 			time.Sleep(time.Second * time.Duration(tempo))
 			fmt.Println("MultiAddr")
-			respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", limit,tamanhoTxsRecebidas)
+			respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", limit, tamanhoTxsRecebidas)
 			resposta = Function.ConverteMultiAddrParaAddr(respostaMultiAddr)
 			if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 				fmt.Println(" Erro no retorno das informações do endereço: ", endereco)
@@ -214,41 +214,41 @@ func BuscaEnderecosD1(){
 			if encerraExecucao {
 				break
 			}
-			tamanhoTxsRecebidas =  tamanhoTxsRecebidas + len(resposta.Txs)
-			confirmSalve := Function.SaveAddrSimplificadoEmPartes(resposta, 2000,ConnectionMongoDB, Database, Collection)
+			tamanhoTxsRecebidas = tamanhoTxsRecebidas + len(resposta.Txs)
+			confirmSalve := Function.SaveAddrSimplificadoEmPartes(resposta, 2000, ConnectionMongoDB, Database, Collection)
 
 			if confirmSalve {
 				fmt.Println("Define offset: ", tamanhoTxsRecebidas)
-				Function.DefineIndice(tamanhoTxsRecebidas,"offsetTxs.txt")
+				Function.DefineIndice(tamanhoTxsRecebidas, "offsetTxs.txt")
 				fmt.Println("Endereco Salvo ", endereco)
 				fmt.Println("Tamanho da transação: ", N_tx)
-				fmt.Println("Transações restantes: ", N_tx - tamanhoTxsRecebidas)
-			} else if !confirmSalve{
+				fmt.Println("Transações restantes: ", N_tx-tamanhoTxsRecebidas)
+			} else if !confirmSalve {
 				fmt.Println("Falha ao salva endereco ", endereco)
 				encerraExecucao = true
 				break
 			}
 
-			if  tamanhoTxsRecebidas >= N_tx{
+			if tamanhoTxsRecebidas >= N_tx {
 				fmt.Println("Foram salvas todas as transações do endereço: ", endereco)
 				fmt.Println("Incrementa o indice, ou seja, passa para o proximo endereço")
 				fmt.Println("Inicia o offset")
-				Function.IncrementaIndice(indice,"indice_lista_enderecos.txt")
-				Function.DefineIndice(0,"offsetTxs.txt")
+				Function.IncrementaIndice(indice, "indice_lista_enderecos.txt")
+				Function.DefineIndice(0, "offsetTxs.txt")
 				break
-			}else {
+			} else {
 				time.Sleep(time.Second * time.Duration(tempo))
 				if !utiliza_multiaddr {
 					fmt.Println("RawAddr")
-					resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", limit,tamanhoTxsRecebidas)
+					resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", limit, tamanhoTxsRecebidas)
 				}
 				if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 					utiliza_multiaddr = true
 					time.Sleep(time.Second * time.Duration(tempo))
 					fmt.Println("MultiAddr")
-					respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", limit,tamanhoTxsRecebidas)
+					respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", limit, tamanhoTxsRecebidas)
 					resposta = Function.ConverteMultiAddrParaAddr(respostaMultiAddr)
-					if len(resposta.Address) < 1 || len(resposta.Txs) < 1{
+					if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 						fmt.Println(" Nao buscou os restantes da transações do endereço: ", endereco)
 						fmt.Println("Limit: ", limit)
 						fmt.Println("Offset: ", tamanhoTxsRecebidas)
@@ -262,26 +262,40 @@ func BuscaEnderecosD1(){
 	}
 }
 
-func BuscaEnderecosDistancia1(){
+func TesteDistancia() {
+	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+	Database := "Endereco"
+	Collection := "Distancia1"
+
+	valores := Function.GetAllAddrLimit(100000000, ConnectionMongoDB, Database, Collection)
+	enderecos := []string{}
+	for _, item := range valores {
+		enderecos = append(enderecos, item.Address)
+	}
+	_, tam := Function.RemoveDuplicados(enderecos)
+	fmt.Println(tam)
+}
+
+func BuscaEnderecosDistancia1() {
 	fmt.Println("-- MultiAddr ---")
 	BuscaEnderecosDistancia1_MultiAddr()
 	fmt.Println("-- RawAddr ---")
 	BuscaEnderecosDistancia1_RawAddr()
 }
 
-func BuscaEnderecosDistancia1_RawAddr(){
+func BuscaEnderecosDistancia1_RawAddr() {
 	encerraExecucao := false
 	urlAPI := "https://blockchain.info"
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 	Database := "Endereco"
-	infoDistancia1 := Function.GetInfoMongoDB( ConnectionMongoDB,
-		Database,"Distancia1Informacoes")
+	infoDistancia1 := Function.GetInfoMongoDB(ConnectionMongoDB,
+		Database, "Distancia1Informacoes")
 	enderecos := infoDistancia1.InfoEnderecos.Enderecos
 	tamanhoEnderecos := len(enderecos)
 	indiceInicial := Function.BuscaIndice("indice_lista_enderecos.txt")
 	tempo := 10
 
-	for indice := indiceInicial ; indice < tamanhoEnderecos; indice++{
+	for indice := indiceInicial; indice < tamanhoEnderecos; indice++ {
 
 		if encerraExecucao {
 			break
@@ -296,7 +310,7 @@ func BuscaEnderecosDistancia1_RawAddr(){
 		endereco := enderecos[indice]
 		fmt.Println("Indice: ", indice)
 		fmt.Println("Buscando o endereco: ", endereco)
-		resposta := Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 2000,0)
+		resposta := Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 2000, 0)
 
 		if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 			fmt.Println(" Erro no retorno das informações do endereço: ", endereco)
@@ -312,11 +326,11 @@ func BuscaEnderecosDistancia1_RawAddr(){
 			if encerraExecucao {
 				break
 			}
-			tamanhoTxsRecebidas =  tamanhoTxsRecebidas + len(resposta.Txs)
+			tamanhoTxsRecebidas = tamanhoTxsRecebidas + len(resposta.Txs)
 			contSalve := 0
-			if  tamanhoTxsRecebidas >= N_tx{
-				tamanholistaEnderecos:= len(listaEnderecos)
-				fmt.Println("Salvando o Endereco: ", endereco," no MongoDB ")
+			if tamanhoTxsRecebidas >= N_tx {
+				tamanholistaEnderecos := len(listaEnderecos)
+				fmt.Println("Salvando o Endereco: ", endereco, " no MongoDB ")
 				fmt.Println("Tamanho da lista que contem todas as transações do ", endereco, " é ", tamanholistaEnderecos)
 				for _, list_end := range listaEnderecos {
 					confirmSalve := Function.SaveAddrSimplificado(list_end, ConnectionMongoDB, Database, "Distancia1")
@@ -326,8 +340,8 @@ func BuscaEnderecosDistancia1_RawAddr(){
 					}
 					if contSalve == tamanholistaEnderecos {
 						fmt.Println("Endereco Salvo ", endereco)
-						Function.IncrementaIndice(indice,"indice_lista_enderecos.txt")
-					} else if !confirmSalve{
+						Function.IncrementaIndice(indice, "indice_lista_enderecos.txt")
+					} else if !confirmSalve {
 						fmt.Println("Falha ao salva endereco ", endereco)
 						encerraExecucao = true
 						break
@@ -336,9 +350,9 @@ func BuscaEnderecosDistancia1_RawAddr(){
 				if contSalve == tamanholistaEnderecos {
 					break
 				}
-			}else {
+			} else {
 				time.Sleep(time.Second * time.Duration(tempo))
-				resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 2000,tamanhoTxsRecebidas)
+				resposta = Function.GetEndereco(endereco, urlAPI, "/rawaddr/", 2000, tamanhoTxsRecebidas)
 				if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 					fmt.Println(" Nao buscou os restantes da transações do endereço: ", endereco)
 					fmt.Println("Limit: ", 2000)
@@ -355,19 +369,19 @@ func BuscaEnderecosDistancia1_RawAddr(){
 
 }
 
-func BuscaEnderecosDistancia1_MultiAddr(){
+func BuscaEnderecosDistancia1_MultiAddr() {
 	encerraExecucao := false
 	urlAPI := "https://blockchain.info"
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 	Database := "Endereco"
-	infoDistancia1 := Function.GetInfoMongoDB( ConnectionMongoDB,
-		Database,"Distancia1Informacoes")
+	infoDistancia1 := Function.GetInfoMongoDB(ConnectionMongoDB,
+		Database, "Distancia1Informacoes")
 	enderecos := infoDistancia1.InfoEnderecos.Enderecos
 	tamanhoEnderecos := len(enderecos)
 	indiceInicial := Function.BuscaIndice("indice_lista_enderecos.txt")
 	tempo := 10
 
-	for indice := indiceInicial ; indice < tamanhoEnderecos; indice++{
+	for indice := indiceInicial; indice < tamanhoEnderecos; indice++ {
 
 		if encerraExecucao {
 			break
@@ -382,7 +396,7 @@ func BuscaEnderecosDistancia1_MultiAddr(){
 		endereco := enderecos[indice]
 		fmt.Println("Indice: ", indice)
 		fmt.Println("Buscando o endereco: ", endereco)
-		respostaMultiAddr := Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", 2000,0)
+		respostaMultiAddr := Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", 2000, 0)
 		resposta := Function.ConverteMultiAddrParaAddr(respostaMultiAddr)
 		if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 			fmt.Println(" Erro no retorno das informações do endereço: ", endereco)
@@ -398,11 +412,11 @@ func BuscaEnderecosDistancia1_MultiAddr(){
 			if encerraExecucao {
 				break
 			}
-			tamanhoTxsRecebidas =  tamanhoTxsRecebidas + len(resposta.Txs)
+			tamanhoTxsRecebidas = tamanhoTxsRecebidas + len(resposta.Txs)
 			contSalve := 0
-			if  tamanhoTxsRecebidas >= N_tx{
-				tamanholistaEnderecos:= len(listaEnderecos)
-				fmt.Println("Salvando o Endereco: ", endereco," no MongoDB ")
+			if tamanhoTxsRecebidas >= N_tx {
+				tamanholistaEnderecos := len(listaEnderecos)
+				fmt.Println("Salvando o Endereco: ", endereco, " no MongoDB ")
 				fmt.Println("Tamanho da lista que contem todas as transações do ", endereco, " é ", tamanholistaEnderecos)
 				for _, list_end := range listaEnderecos {
 					confirmSalve := Function.SaveAddrSimplificado(list_end, ConnectionMongoDB, Database, "Distancia1")
@@ -411,9 +425,9 @@ func BuscaEnderecosDistancia1_MultiAddr(){
 						contSalve = contSalve + 1
 					}
 					if contSalve == tamanholistaEnderecos {
-						Function.IncrementaIndice(indice,"indice_lista_enderecos.txt")
+						Function.IncrementaIndice(indice, "indice_lista_enderecos.txt")
 						fmt.Println("Endereco Salvo ", endereco)
-					} else if !confirmSalve{
+					} else if !confirmSalve {
 						fmt.Println("Falha ao salva endereco ", endereco)
 						encerraExecucao = true
 						break
@@ -422,9 +436,9 @@ func BuscaEnderecosDistancia1_MultiAddr(){
 				if contSalve == tamanholistaEnderecos {
 					break
 				}
-			}else {
+			} else {
 				time.Sleep(time.Second * time.Duration(tempo))
-				respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", 2000,tamanhoTxsRecebidas)
+				respostaMultiAddr = Function.GetMultiAddr([]string{endereco}, urlAPI, "/multiaddr?active=", 2000, tamanhoTxsRecebidas)
 				resposta = Function.ConverteMultiAddrParaAddr(respostaMultiAddr)
 				if len(resposta.Address) < 1 || len(resposta.Txs) < 1 {
 					fmt.Println(" Nao buscou os restantes da transações do endereço: ", endereco)
