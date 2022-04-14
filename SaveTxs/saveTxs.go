@@ -262,18 +262,50 @@ func BuscaEnderecosD1() {
 	}
 }
 
+func TesteEndereco_indice_2053() {
+	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+	Database := "Endereco"
+	Collection := "Endereco_2053"
+	enderecos := Function.GetAllAddrLimit(1000000, ConnectionMongoDB,
+		Database, Collection)
+	dic := map[string]string{}
+	hashes := []string{}
+	for _, addr := range enderecos {
+		for _, tx := range addr.Txs {
+			hashes = append(hashes, tx.Hash)
+			_, ok := dic[tx.Hash]
+			if ok {
+				continue
+			} else {
+				dic[tx.Hash] = tx.Hash
+			}
+		}
+	}
+	//x,_ := Function.RemoveDuplicados(hashes)
+
+	fmt.Println(len(hashes))
+	//fmt.Println(len(x))
+	fmt.Println(len(dic))
+}
+
 func TesteDistancia() {
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 	Database := "Endereco"
 	Collection := "Distancia1"
 
 	valores := Function.GetAllAddrLimit(100000000, ConnectionMongoDB, Database, Collection)
-	enderecos := []string{}
+	dic := map[string]string{}
+
 	for _, item := range valores {
-		enderecos = append(enderecos, item.Address)
+		_, ok := dic[item.Address]
+		if ok {
+
+		} else {
+			dic[item.Address] = item.Address
+		}
 	}
-	_, tam := Function.RemoveDuplicados(enderecos)
-	fmt.Println(tam)
+
+	fmt.Println(len(dic))
 }
 
 func BuscaEnderecosDistancia1() {

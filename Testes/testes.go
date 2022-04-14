@@ -2,27 +2,15 @@ package main
 
 import (
 	"Tcc/Shared/Function"
+	"Tcc/Shared/Model"
 	"fmt"
 	"math"
 	"strconv"
 )
 
 func main() {
+	CreateClusterTeste()
 
-	clusters_contem_o_endereco := Function.SearchAddrMapClusters(1000000, "1JawWE56G5NmnB5iuYbFikbdETs88Fxkwo",
-		"16233a85df104fd500c3ak1739dd1471a563c36537755be6a7eeeac9c00ff4dbf",
-		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
-		"Cluster", "Map_Distancia1")
-
-	fmt.Println(len(clusters_contem_o_endereco))
-	// ultimoValor := (1512 / 1000.0)
-	//x, o := math.Modf(ultimoValor)
-	//fmt.Println(x)
-	//fmt.Println(o)
-	//
-	// fmt.Println("Funcao: ", UltimoValor(1511, 1000.0))
-	//
-	//fmt.Println("Funcao: ", ParteFracionario(1511, 1000.0))
 }
 
 func ParteFracionario(valorReal int, dividendo float32) int {
@@ -75,4 +63,55 @@ func TesteMap() {
 		}
 	}
 	fmt.Println(mapas)
+}
+
+func CreateClusterTeste() {
+	clusters := []Model.MapCluster{
+		Model.MapCluster{
+			Identificador: "1",
+			Clusters:      map[string]string{"A": "A", "B": "B"},
+		}, Model.MapCluster{
+			Identificador: "2",
+			Clusters:      map[string]string{"C": "C", "B": "B"},
+		}, Model.MapCluster{
+			Identificador: "3",
+			Clusters:      map[string]string{"Q": "Q", "W": "W"},
+		}, Model.MapCluster{
+			Identificador: "4",
+			Clusters:      map[string]string{"R": "R", "T": "T"},
+		}, Model.MapCluster{
+			Identificador: "5",
+			Clusters:      map[string]string{"Q": "Q", "R": "R"},
+		}, Model.MapCluster{
+			Identificador: "6",
+			Clusters:      map[string]string{"A": "A", "Q": "Q"},
+		},
+	}
+
+	for _, cluster := range clusters {
+		Function.SalvaMapCluster(cluster,
+			"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+			"teste", "Map_Distancia1")
+	}
+}
+
+func QuantidadeEnderecos() {
+	clusters := Function.GetAllMapClustersLimit(1000000,
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"teste", "Map_Distancia1")
+	enderecos := map[string]string{}
+
+	for _, cluster := range clusters {
+		for _, v := range cluster.Clusters {
+			_, ok := enderecos[v]
+			if ok {
+				continue
+			} else {
+				enderecos[v] = v
+			}
+		}
+	}
+	// 7 enderecos diferentes
+	fmt.Println(enderecos)
+	fmt.Println(len(enderecos))
 }

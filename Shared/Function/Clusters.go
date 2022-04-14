@@ -4,6 +4,7 @@ import (
 	"Tcc/Shared/Database"
 	"Tcc/Shared/Model"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 )
@@ -266,6 +267,229 @@ func SearchAddrMapClusters(limit int64, addr string, identificadorAtual, Connect
 
 		result = append(result, cluster)
 
+	}
+
+	return result
+}
+
+func SearchAddrMapsClusters(limit int64, identificadoresPesquisados []string, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados string) (result []Model.MapCluster) {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter, option interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{
+		"identificador": bson.M{"$in": identificadoresPesquisados},
+	}
+
+	option = bson.M{}
+
+	cursor, err := Database.QueryLimit(client, ctx, DataBaseMongo, CollectionRecuperaDados, limit, filter, option)
+
+	// handle the errors.
+	if err != nil {
+
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var cluster Model.MapCluster
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+
+		result = append(result, cluster)
+
+	}
+
+	return result
+}
+
+func DeleteIdentificadoresCluster(identificador string, ConnectionMongoDB string, DataBaseMongo string, Collection string) bool {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{
+		"identificador": identificador,
+	}
+
+	cursor, err := Database.DeleteMany(client, ctx, DataBaseMongo, Collection, filter)
+
+	if err != nil {
+
+		panic(err)
+	}
+	// verifica a quantidade de linhas afetadas
+	if cursor.DeletedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func PutIdentificador(identificadorBase, identificadorModificado, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+
+	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+	if errou != nil {
+		return false
+	}
+
+	Database.Ping(cliente, contexto)
+	defer Database.Close(cliente, contexto, cancel)
+
+	var result *mongo.UpdateResult
+	var err error
+
+	filter := bson.M{
+		"identificador": identificadorModificado,
+	}
+	update := bson.M{"$set": bson.M{"identificador": identificadorBase}}
+
+	result, err = Database.UpdateMany(cliente, contexto, DataBaseMongo, Collection, filter, update)
+
+	// handle the error
+	if err != nil {
+		return false
+	}
+
+	if result.ModifiedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func PutTamanhoCluster(tamanho_map_enderecos_resultante int, identificadorBase, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+
+	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+	if errou != nil {
+		return false
+	}
+
+	Database.Ping(cliente, contexto)
+	defer Database.Close(cliente, contexto, cancel)
+
+	var result *mongo.UpdateResult
+	var err error
+
+	filter := bson.M{
+		"identificador": identificadorBase,
+	}
+	update := bson.M{"$set": bson.M{"tamanhocluster": tamanho_map_enderecos_resultante}}
+
+	result, err = Database.UpdateOne(cliente, contexto, DataBaseMongo, Collection, filter, update)
+
+	// handle the error
+	if err != nil {
+		return false
+	}
+
+	if result.ModifiedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func PutMapCluster(clusterResultante map[string]string, identificador, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+	if errou != nil {
+		return false
+	}
+
+	Database.Ping(cliente, contexto)
+	defer Database.Close(cliente, contexto, cancel)
+
+	var result *mongo.UpdateResult
+	var err error
+
+	filter := bson.M{
+		"identificador": identificador,
+	}
+	update := bson.M{"$set": bson.M{"clusters": clusterResultante}}
+
+	result, err = Database.UpdateOne(cliente, contexto, DataBaseMongo, Collection, filter, update)
+
+	// handle the error
+	if err != nil {
+		return false
+	}
+
+	if result.ModifiedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+// Identificadores
+
+func GetIdentificadorById(identificador string, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados string) (result Model.Identificador) {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter, option interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{
+		"identificador": identificador,
+	}
+
+	option = bson.M{}
+
+	cursor, err := Database.QueryLimit(client, ctx, DataBaseMongo, CollectionRecuperaDados, 1, filter, option)
+
+	// handle the errors.
+	if err != nil {
+
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var identificador_cluster Model.Identificador
+
+		if err := cursor.Decode(&identificador_cluster); err != nil {
+			log.Fatal(err)
+		}
+		return identificador_cluster
 	}
 
 	return result
