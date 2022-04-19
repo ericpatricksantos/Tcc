@@ -238,10 +238,13 @@ func SearchAddrMapClusters(limit int64, addr string, identificadorAtual, Connect
 	// that stores bjson objects.
 	var filter, option interface{}
 
-	// filter  gets all document,
-	// with maths field greater that 70
+	// Essa parte esta comentada, pq o valor dos dicionario nao foi preenchido
+	//filter = bson.M{
+	//	"clusters." + addr: addr,
+	//	"identificador":    bson.M{"$ne": identificadorAtual},
+	//}
 	filter = bson.M{
-		"clusters." + addr: addr,
+		"clusters." + addr: "",
 		"identificador":    bson.M{"$ne": identificadorAtual},
 	}
 
@@ -351,6 +354,37 @@ func DeleteIdentificadoresCluster(identificador string, ConnectionMongoDB string
 	} else {
 		return false
 	}
+}
+
+func DeleleListIdentificadoresCluster(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection string) (sucesso bool) {
+	for _, elem := range identificadores {
+		confirm := DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection)
+		if !confirm {
+			fmt.Println(" Erro: Não foi Deletado os identificadores")
+			return false
+		}
+	}
+	fmt.Println(" Deletado os identificadores com Sucesso")
+	return true
+}
+
+func DeleleListIdentificadoresAndClusters(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores, Collection_Map_Clusters string) (sucesso bool) {
+	var sucess bool
+	for _, elem := range identificadores {
+		sucess = DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores)
+		if sucess {
+			sucess = DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Map_Clusters)
+			if !sucess {
+				fmt.Println(" Erro: Não foi Deletado os Clusters")
+				return false
+			}
+		} else {
+			fmt.Println(" Erro: Não foi Deletado os identificadores")
+			return false
+		}
+	}
+	fmt.Println(" Deletado os identificadores e Clusters com Sucesso")
+	return true
 }
 
 func PutIdentificador(identificadorBase, identificadorModificado, ConnectionMongoDB, DataBaseMongo, Collection string) bool {

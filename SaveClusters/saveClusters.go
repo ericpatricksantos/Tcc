@@ -50,7 +50,9 @@ func CreateClustersDistancia1_Map() {
 						fmt.Println(" -------- O endereco: ", endereco_input,
 							" existe no cluster (Lista da endereços) -----")
 					} else {
-						cluster.Clusters[endereco_input] = endereco_input
+						// cluster.Clusters[endereco_input] = endereco_input
+						// fazendo isso libera mais espaço e da para salvar ate 200 mil clusters
+						cluster.Clusters[endereco_input] = ""
 						fmt.Println(" -------- O endereco: ", endereco_input,
 							" foi adicionado no cluster (Lista da endereços) -----")
 					}

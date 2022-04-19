@@ -10,7 +10,8 @@ import (
 
 func main() {
 	CreateClusterTeste()
-
+	//TesteCriacao()
+	//TamUnicoCluster()
 }
 
 func ParteFracionario(valorReal int, dividendo float32) int {
@@ -69,22 +70,22 @@ func CreateClusterTeste() {
 	clusters := []Model.MapCluster{
 		Model.MapCluster{
 			Identificador: "1",
-			Clusters:      map[string]string{"A": "A", "B": "B"},
+			Clusters:      map[string]string{"A": "", "B": ""},
 		}, Model.MapCluster{
 			Identificador: "2",
-			Clusters:      map[string]string{"C": "C", "B": "B"},
+			Clusters:      map[string]string{"C": "", "B": ""},
 		}, Model.MapCluster{
 			Identificador: "3",
-			Clusters:      map[string]string{"Q": "Q", "W": "W"},
+			Clusters:      map[string]string{"Q": "", "W": ""},
 		}, Model.MapCluster{
 			Identificador: "4",
-			Clusters:      map[string]string{"R": "R", "T": "T"},
+			Clusters:      map[string]string{"R": "", "T": ""},
 		}, Model.MapCluster{
 			Identificador: "5",
-			Clusters:      map[string]string{"Q": "Q", "R": "R"},
+			Clusters:      map[string]string{"Q": "", "R": ""},
 		}, Model.MapCluster{
 			Identificador: "6",
-			Clusters:      map[string]string{"A": "A", "Q": "Q"},
+			Clusters:      map[string]string{"A": "", "Q": ""},
 		},
 	}
 
@@ -114,4 +115,27 @@ func QuantidadeEnderecos() {
 	// 7 enderecos diferentes
 	fmt.Println(enderecos)
 	fmt.Println(len(enderecos))
+}
+
+func TesteCriacao() {
+	v := map[string]string{}
+	for i := 0; i < 1; i++ {
+		v["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+strconv.Itoa(i)] = ""
+	}
+
+	conf := Function.PutMapCluster(v, "1",
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"teste", "Map_Distancia1")
+	if conf {
+		fmt.Println("deu bom")
+	}
+}
+
+func TamUnicoCluster() {
+	clusters := Function.GetAllMapClustersLimit(1000000,
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"teste", "Map_Distancia1")
+
+	x := len(clusters[0].Clusters)
+	fmt.Println(x)
 }
