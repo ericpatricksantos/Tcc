@@ -356,9 +356,38 @@ func DeleteIdentificadoresCluster(identificador string, ConnectionMongoDB string
 	}
 }
 
+func DeleteIdentificadorCluster(identificador string, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+	existe := CheckItem(ConnectionMongoDB, DataBaseMongo, Collection, "identificador", identificador)
+	if !existe {
+		fmt.Println(" Esse elemento nao existe: ", identificador)
+		return false
+	}
+	return DeleteIdentificadoresCluster(identificador, ConnectionMongoDB, DataBaseMongo, Collection)
+}
+
+func CheckItem(ConnectionMongoDB, dataBase, col, key, code string) bool {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+	count, err := Database.CountElemento(client, ctx, dataBase, col, key, code)
+	if err != nil {
+		panic(err)
+	}
+	if count > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func DeleleListIdentificadoresCluster(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection string) (sucesso bool) {
 	for _, elem := range identificadores {
-		confirm := DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection)
+		confirm := DeleteIdentificadorCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection)
 		if !confirm {
 			fmt.Println(" Erro: Não foi Deletado os identificadores")
 			return false
@@ -371,9 +400,9 @@ func DeleleListIdentificadoresCluster(identificadores []string, ConnectionMongoD
 func DeleleListIdentificadoresAndClusters(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores, Collection_Map_Clusters string) (sucesso bool) {
 	var sucess bool
 	for _, elem := range identificadores {
-		sucess = DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores)
+		sucess = DeleteIdentificadorCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores)
 		if sucess {
-			sucess = DeleteIdentificadoresCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Map_Clusters)
+			sucess = DeleteIdentificadorCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Map_Clusters)
 			if !sucess {
 				fmt.Println(" Erro: Não foi Deletado os Clusters")
 				return false
@@ -452,6 +481,15 @@ func PutTamanhoCluster(tamanho_map_enderecos_resultante int, identificadorBase, 
 }
 
 func PutMapCluster(clusterResultante map[string]string, identificador, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+	existe := CheckItem(ConnectionMongoDB, DataBaseMongo, Collection, "identificador", identificador)
+	if !existe {
+		fmt.Println(" Nao existe o cluster com o identificador: ", identificador)
+		return false
+	}
+	return PutMapClusterResultante(clusterResultante, identificador, ConnectionMongoDB, DataBaseMongo, Collection)
+}
+
+func PutMapClusterResultante(clusterResultante map[string]string, identificador, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
 	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
 	if errou != nil {
 		return false

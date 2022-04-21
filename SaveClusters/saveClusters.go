@@ -8,9 +8,12 @@ import (
 
 var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 var DB_Endereco string = "Endereco"
-var DB_Cluster string = "Cluster"
+
+//var DB_Cluster string = "Cluster"
+var DB_Cluster string = "teste"
 
 func main() {
+	CreateClustersDistancia1_Map()
 	VerificaCreateClustersDistancia1_Map()
 }
 
@@ -90,7 +93,7 @@ func VerificaCreateClustersDistancia1_Map() {
 	mapas := map[string]string{}
 
 	for _, cluster := range clusters {
-		for _, endereco := range cluster.Clusters {
+		for endereco, _ := range cluster.Clusters {
 			_, ok := mapas[endereco]
 			if ok {
 				continue

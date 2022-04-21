@@ -12,7 +12,7 @@ var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gs
 var DB_Cluster string = "teste"
 var Collection_Cluster string = "Distancia1"
 var Collection_Cluster_Map string = "Map_Distancia1"
-var Collection_Identificadores string = "Identificadores_1"
+var Collection_Identificadores string = "Map_Identificadores_1"
 var limit int64 = 10000000000
 var limit_cluster int = 100000
 
@@ -36,11 +36,17 @@ func h1_Map() {
 
 func h1_im() (save, erro, executeAll bool) {
 	clusters := Function.GetAllMapClustersLimit(limit, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
-	if len(clusters) > 0 {
-		for indice_cluster, cluster := range clusters {
+	tamanho_clusters := len(clusters)
+	if tamanho_clusters > 0 {
+		indice_cluster_inicial := Function.BuscaIndice("IndiceCluster.txt")
+		if indice_cluster_inicial >= tamanho_clusters {
+			indice_cluster_inicial = 0
+			Function.DefineIndice(0, "IndiceCluster.txt")
+		}
+		for indice_cluster := indice_cluster_inicial; indice_cluster < tamanho_clusters; indice_cluster++ {
 
-			identificador_cluster := cluster.Identificador
-			map_enderecos := cluster.Clusters
+			identificador_cluster := clusters[indice_cluster].Identificador
+			map_enderecos := clusters[indice_cluster].Clusters
 			map_enderecos_resultante := map[string]string{}
 			tamanho_map_enderecos := len(map_enderecos)
 			indice_map_enderecos := 0
@@ -59,6 +65,7 @@ func h1_im() (save, erro, executeAll bool) {
 					CountCluster(identificador_cluster, identificadores, map_enderecos_resultante,
 						ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
 					tamanho_map_enderecos_resultante := len(map_enderecos_resultante)
+					fmt.Println(" ---- Tamanho do Mapa Resultante: ", tamanho_map_enderecos_resultante)
 					if tamanho_map_enderecos_resultante > limit_cluster {
 						// Verificar o tamanho da lista de endereços sem repetição
 						// Se for maior 100000 não une as listas de endereços
@@ -71,7 +78,7 @@ func h1_im() (save, erro, executeAll bool) {
 						// Apaga os identificadores que nao serão usadas
 						// Apaga os clusters que nao serão usadas
 						// Atualiza o tamanho do cluster
-						return ProcessCluster_M2(map_enderecos_resultante, tamanho_map_enderecos_resultante,
+						return ProcessCluster_M2(map_enderecos, map_enderecos_resultante, tamanho_map_enderecos_resultante,
 							identificadores, identificador_cluster, ConnectionMongo, DB_Cluster,
 							Collection_Cluster_Map, Collection_Identificadores)
 					}
@@ -85,6 +92,8 @@ func h1_im() (save, erro, executeAll bool) {
 				}
 				indice_map_enderecos++
 			}
+
+			Function.IncrementaIndice(indice_cluster, "IndiceCluster.txt")
 		}
 	} else {
 		fmt.Println(" Não existem clusters")
@@ -165,12 +174,19 @@ func ProcessCluster_M1(tamanho_map_enderecos_resultante int, identificadores []s
 Apaga os identificadores que nao serão usadas
 Apaga os clusters que nao serão usadas
 Atualiza o tamanho do cluster */
-func ProcessCluster_M2(map_enderecos_resultante map[string]string, tamanho_map_enderecos_resultante int,
+func ProcessCluster_M2(map_endereco_atual, map_enderecos_resultante map[string]string, tamanho_map_enderecos_resultante int,
 	identificadores []string, identificadorBase, ConnectionMongo, DB_Cluster,
 	Collection_Cluster_Map, Collection_Identificadores string) (save, erro, executeAll bool) {
 	var sucesso bool
 
-	sucesso = Function.PutMapCluster(map_enderecos_resultante, identificadorBase, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+	// verifica se o map_endereco_atual e o map_enderecos_resultante são iguais
+	if Function.VerificaIgualdade(map_endereco_atual, map_enderecos_resultante) {
+		fmt.Println("----------- O cluster atual é igual o cluster resultante, por isso nao precisa atualizar, somente apagar os identificadores e o clusters")
+		sucesso = true
+	} else {
+		fmt.Println("----------- O cluster atual é diferente do cluster resultante ")
+		sucesso = Function.PutMapCluster(map_enderecos_resultante, identificadorBase, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+	}
 
 	if sucesso {
 		sucesso = Function.DeleleListIdentificadoresAndClusters(identificadores, ConnectionMongo, DB_Cluster, Collection_Identificadores, Collection_Cluster_Map)
