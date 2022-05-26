@@ -9,9 +9,54 @@ import (
 )
 
 func main() {
-	CreateClusterTeste()
+	colClusters := "clusterTeste"
+	colIdentif := "IdentifTeste"
+	ConnectionMongo := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+	DB_Cluster := "teste"
+
+	identificador := Model.Identificador{
+		Identificador:  "1jjjAAAAAAAAAAAAAAAAAAAAAAAAAjjjjjjjjjjjjjjjjjjjjjjjjjj",
+		TamanhoCluster: 20000000000,
+	}
+	clusters := map[string]string{}
+	for j := 0; j < 2000; j++ {
+		ch := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + strconv.Itoa(j)
+		clusters[ch] = ""
+	}
+	fmt.Println("Cluster: ", len(clusters))
+
+	cluster := Model.MapCluster{
+		Identificador: "1jjjAAAAAAAAAAAAAAAAAAAAAAAAAjjjjjjjjjjjjjjjjjjjjjjjjjj",
+		Clusters:      clusters,
+	}
+	fmt.Println("Identificador: ", cluster.Identificador)
+	fmt.Println("Tamanho desse Cluster: ", len(cluster.Clusters))
+	documentsMapCluster := []interface{}{}
+	documentsIdentificadores := []interface{}{}
+	for i := 0; i <= 2000; i++ {
+		documentsMapCluster = append(documentsMapCluster, cluster)
+		documentsIdentificadores = append(documentsIdentificadores, identificador)
+	}
+
+	fmt.Println(len(documentsMapCluster))
+	fmt.Println(len(documentsIdentificadores))
+
+	Function.SaveMapClusters(documentsMapCluster, ConnectionMongo, DB_Cluster, colClusters)
+	Function.SaveIdentificadores(documentsIdentificadores, ConnectionMongo, DB_Cluster, colIdentif)
+	//CreateClusterTeste()
 	//TesteCriacao()
 	//TamUnicoCluster()
+}
+
+func Teste() {
+	Collection_Cluster_Identificadores_1 := "Identificadores_1"
+	Collection_Cluster_Identificadores_2 := "Identificadores_2"
+	ConnectionMongo := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+	DB_Cluster := "Cluster"
+
+	allIdentificadores := Function.UnionIdentificadoresD1_D2(ConnectionMongo, DB_Cluster, Collection_Cluster_Identificadores_1, Collection_Cluster_Identificadores_2)
+
+	fmt.Println(len(allIdentificadores))
 }
 
 func ParteFracionario(valorReal int, dividendo float32) int {

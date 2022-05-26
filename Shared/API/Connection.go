@@ -120,7 +120,7 @@ func GetMultiEnderecos(enderecos []string, urlAPI string, multiAddr string) Mode
 	return responseObject
 }
 
-func GetMultiAddr(enderecos []string, urlAPI string, multiAddr string, limit ,offset int) Model.MultiEndereco {
+func GetMultiAddr(enderecos []string, urlAPI string, multiAddr string, limit, offset int) Model.MultiEndereco {
 
 	fmt.Println("Calling API...")
 	client := &http.Client{}
@@ -142,6 +142,13 @@ func GetMultiAddr(enderecos []string, urlAPI string, multiAddr string, limit ,of
 
 	resp, err := client.Do(req)
 
+	if resp.StatusCode != 200 {
+		fmt.Println("StatusCode: ", resp.StatusCode)
+		fmt.Println("Erro na resposta da API")
+		fmt.Println()
+
+		return Model.MultiEndereco{}
+	}
 	if err != nil {
 
 		fmt.Println()
@@ -178,7 +185,7 @@ func GetMultiAddr(enderecos []string, urlAPI string, multiAddr string, limit ,of
 func GetUnicoEndereco(endereco string, urlAPI string, RawAddr string) Model.UnicoEndereco {
 	fmt.Println("Calling API...")
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", urlAPI+RawAddr+endereco+"?limit=10000000000",nil)
+	req, err := http.NewRequest("GET", urlAPI+RawAddr+endereco+"?limit=10000000000", nil)
 	if err != nil {
 		fmt.Println()
 		fmt.Println("Erro na resposta da função NewRequest que esta sendo chamada na Função GetUnicoEndereco - {API/Connection.go}")
@@ -227,7 +234,7 @@ func GetUnicoEndereco(endereco string, urlAPI string, RawAddr string) Model.Unic
 	return responseObject
 }
 
-func GetEndereco(endereco string, urlAPI string, RawAddr string, limit ,offset int) Model.Endereco {
+func GetEndereco(endereco string, urlAPI string, RawAddr string, limit, offset int) Model.Endereco {
 	fmt.Println("Calling API...")
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", urlAPI+RawAddr+endereco+"?limit="+strconv.Itoa(limit)+"&offset="+strconv.Itoa(offset), nil)
@@ -246,6 +253,14 @@ func GetEndereco(endereco string, urlAPI string, RawAddr string, limit ,offset i
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
+
+	if resp.StatusCode != 200 {
+		fmt.Println("StatusCode: ", resp.StatusCode)
+		fmt.Println("Erro na resposta da API")
+		fmt.Println()
+
+		return Model.Endereco{}
+	}
 
 	if err != nil {
 		fmt.Println()

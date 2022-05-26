@@ -158,8 +158,8 @@ func BuscaEnderecosD1() {
 	encerraExecucao := false
 	urlAPI := "https://blockchain.info"
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
-	Database := "Endereco"
-	Collection := "Endereco_2053"
+	Database := "teste"
+	Collection := "transacoes2"
 	//infoDistancia1 := Function.GetInfoMongoDB( ConnectionMongoDB,
 	//	Database,"Distancia1Informacoes")
 	//enderecos := infoDistancia1.InfoEnderecos.Enderecos
@@ -262,15 +262,18 @@ func BuscaEnderecosD1() {
 	}
 }
 
-func TesteEndereco_indice_2053() {
+func QuantidadeTransacoesDistancia1() {
 	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
-	Database := "Endereco"
-	Collection := "Endereco_2053"
+	Database := "teste"
+	Collection := "transacoes"
 	enderecos := Function.GetAllAddrLimit(1000000, ConnectionMongoDB,
 		Database, Collection)
 	dic := map[string]string{}
 	hashes := []string{}
+	contador := 0
 	for _, addr := range enderecos {
+		x := len(addr.Txs)
+		contador = contador + x
 		for _, tx := range addr.Txs {
 			hashes = append(hashes, tx.Hash)
 			_, ok := dic[tx.Hash]
@@ -281,9 +284,33 @@ func TesteEndereco_indice_2053() {
 			}
 		}
 	}
+	fmt.Println("Qtd: ", contador)
+	fmt.Println(len(hashes))
+	fmt.Println(len(dic))
+}
+
+func TesteEndereco_indice_2053() {
+	ConnectionMongoDB := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+	Database := "Endereco"
+	Collection := "Endereco_2053"
+	enderecos := Function.GetAllAddrLimit(1000000, ConnectionMongoDB,
+		Database, Collection)
+	dic := map[string]string{}
+	//hashes := []string{}
+	for _, addr := range enderecos {
+		for _, tx := range addr.Txs {
+			//hashes = append(hashes, tx.Hash)
+			_, ok := dic[tx.Hash]
+			if ok {
+				continue
+			} else {
+				dic[tx.Hash] = tx.Hash
+			}
+		}
+	}
 	//x,_ := Function.RemoveDuplicados(hashes)
 
-	fmt.Println(len(hashes))
+	//mt.Println(len(hashes))
 	//fmt.Println(len(x))
 	fmt.Println(len(dic))
 }

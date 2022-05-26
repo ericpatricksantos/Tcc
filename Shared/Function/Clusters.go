@@ -53,7 +53,6 @@ func SalvaIdentificadorCluster(Cluster Model.Identificador, ConnectionMongoDB st
 		Database.Ping(cliente, contexto)
 
 		Database.ToDoc(Cluster)
-
 		result, err := Database.InsertOne(cliente, contexto, DataBaseMongo, Collection, Cluster)
 
 		// handle the error
@@ -62,7 +61,6 @@ func SalvaIdentificadorCluster(Cluster Model.Identificador, ConnectionMongoDB st
 			panic(err)
 		}
 		defer Database.Close(cliente, contexto, cancel)
-
 		if result.InsertedID != nil {
 			return true
 		} else {
@@ -95,6 +93,33 @@ func GetAllClustersLimit(limit int64, ConnectionMongoDB string, DataBaseMongo st
 	defer cursor.Close(ctx)
 	for cursor.Next(ctx) {
 		var cluster Model.Clusters
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+		Clusters = append(Clusters, cluster)
+	}
+	return Clusters
+}
+
+func GetAllMapClusterLimitOffset(limit int64, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []Model.MapCluster) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var cluster Model.MapCluster
 
 		if err := cursor.Decode(&cluster); err != nil {
 			log.Fatal(err)
@@ -182,7 +207,6 @@ func SalvaMapCluster(Cluster Model.MapCluster, ConnectionMongoDB string, DataBas
 			panic(err)
 		}
 		defer Database.Close(cliente, contexto, cancel)
-
 		if result.InsertedID != nil {
 			return true
 		} else {
@@ -195,6 +219,47 @@ func SalvaMapCluster(Cluster Model.MapCluster, ConnectionMongoDB string, DataBas
 	}
 
 	return false
+}
+
+func SaveMapClusters(Clusters []interface{}, ConnectionMongoDB string, DataBaseMongo string, Collection string) bool {
+	if len(Clusters) > 0 {
+		cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+		if errou != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função Connect - {Database/Mongo.go}  que esta sendo chamada na Função SaveAddrSimplificado - {Function/Clusters.go}")
+			fmt.Println()
+
+			panic(errou)
+		}
+
+		Database.Ping(cliente, contexto)
+		defer Database.Close(cliente, contexto, cancel)
+
+		//documents := []interface{}{}
+		//for _, item := range Clusters {
+		//	documents = append(documents, item)
+		//}
+
+		result, err := Database.InsertMany(cliente, contexto, DataBaseMongo, Collection, Clusters)
+		// handle the error
+		if err != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função InsertMany - {Database/Mongo.go}  que esta sendo chamada na Função MapCluster - {Function/Clusters.go}")
+			fmt.Println()
+
+			panic(err)
+		}
+
+		if result.InsertedIDs != nil {
+			return true
+		} else {
+			return false
+		}
+
+	} else {
+		fmt.Println("A lista esta vazio")
+		return false
+	}
 }
 
 func GetAllMapClustersLimit(limit int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []Model.MapCluster) {
@@ -565,4 +630,137 @@ func GetIdentificadorById(identificador string, ConnectionMongoDB, DataBaseMongo
 	}
 
 	return result
+}
+
+func GetAllIdentificadores(limit, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Identificadors []Model.Identificador) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var identificador Model.Identificador
+
+		if err := cursor.Decode(&identificador); err != nil {
+			log.Fatal(err)
+		}
+		Identificadors = append(Identificadors, identificador)
+	}
+	return Identificadors
+}
+
+func UnionIdentificadores(identificador_1, identificador_2 []Model.Identificador) map[string]string {
+	result := map[string]string{}
+
+	for _, item := range identificador_1 {
+		_, ok := result[item.Identificador]
+		if !ok {
+			result[item.Identificador] = ""
+		}
+	}
+	for _, item := range identificador_2 {
+		_, ok := result[item.Identificador]
+		if !ok {
+			result[item.Identificador] = ""
+		}
+	}
+
+	return result
+}
+
+func UnionIdentificadoresD1_D2(ConnectionMongoDB, DataBaseMongo, CollectionD1, CollectionD2 string) map[string]string {
+	result := map[string]string{}
+	var limit int64 = 100000
+	var offset int64 = 0
+
+	// Busca Transações da Distancia 1
+	for {
+		tx_d1 := GetAllIdentificadores(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD1)
+
+		if len(tx_d1) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, item := range tx_d1 {
+			_, ok := result[item.Identificador]
+			if !ok {
+				result[item.Identificador] = ""
+			}
+		}
+
+		offset = offset + int64(len(tx_d1))
+	}
+
+	// Busca Transações da Distancia 2
+	for {
+		tx_d2 := GetAllIdentificadores(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD2)
+
+		if len(tx_d2) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, item := range tx_d2 {
+			_, ok := result[item.Identificador]
+			if !ok {
+				result[item.Identificador] = ""
+			}
+		}
+
+		offset = offset + int64(len(tx_d2))
+	}
+
+	return result
+}
+
+func SaveIdentificadores(identificadores []interface{}, ConnectionMongoDB string, DataBaseMongo string, Collection string) bool {
+	if len(identificadores) > 0 {
+		cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+		if errou != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função Connect - {Database/Mongo.go}  que esta sendo chamada na Função SaveAddrSimplificado - {Function/identificadores.go}")
+			fmt.Println()
+
+			panic(errou)
+		}
+
+		Database.Ping(cliente, contexto)
+		defer Database.Close(cliente, contexto, cancel)
+
+		//documents := []interface{}{}
+		//for _, item := range identificadores {
+		//	documents = append(documents, item)
+		//}
+
+		result, err := Database.InsertMany(cliente, contexto, DataBaseMongo, Collection, identificadores)
+		// handle the error
+		if err != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função InsertMany - {Database/Mongo.go}  que esta sendo chamada na Função SaveIdentificadores - {Function/identificadores.go}")
+			fmt.Println()
+
+			panic(err)
+		}
+
+		if result.InsertedIDs != nil {
+			return true
+		} else {
+			return false
+		}
+
+	} else {
+		fmt.Println("A lista esta vazio")
+		return false
+	}
 }

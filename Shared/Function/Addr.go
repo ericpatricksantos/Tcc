@@ -503,6 +503,222 @@ func GetAllAddrLimit(limit int64, ConnectionMongoDB string, DataBaseMongo string
 	return addrs
 }
 
+func GetAllAddrLimitOffset(limit, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
+
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Erro na resposta da função Connect - {Database/Mongo.go}  que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+		fmt.Println()
+
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter, option interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{}
+
+	//  option remove id field from all documents
+	option = bson.M{}
+
+	// call the query method with client, context,
+	// database name, collection  name, filter and option
+	// This method returns momngo.cursor and error if any.
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+	// handle the errors.
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Erro na resposta da função Query - {Database/Mongo.go}  que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+		fmt.Println()
+
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var addr Model.Endereco
+
+		if err := cursor.Decode(&addr); err != nil {
+			fmt.Println()
+			fmt.Println("Erro na resposta da função Decode que esta sendo chamada na Função GetAllAddr - {Function/Addr.go}")
+			fmt.Println()
+
+			log.Fatal(err)
+		}
+
+		addrs = append(addrs, addr)
+
+	}
+
+	return addrs
+}
+
+func UnionHashTransacaoD1_D2(ConnectionMongoDB, DataBaseMongo, CollectionD1, CollectionD2 string) map[string]string {
+	result := map[string]string{}
+	var limit int64 = 1000
+	var offset int64 = 0
+
+	// Busca Transações da Distancia 1
+	for {
+		enderecos := GetAllAddrLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD1)
+
+		if len(enderecos) == 0 {
+			offset = 0
+			break
+		}
+		for _, endereco := range enderecos {
+			for _, tx := range endereco.Txs {
+				_, ok := result[tx.Hash]
+				if !ok {
+					result[tx.Hash] = ""
+				}
+			}
+		}
+
+		offset = offset + int64(len(enderecos))
+	}
+
+	fmt.Println(len(result))
+	// Busca Transações da Distancia 2
+	for {
+		enderecos := GetAllAddrLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD2)
+
+		if len(enderecos) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, endereco := range enderecos {
+			for _, tx := range endereco.Txs {
+				_, ok := result[tx.Hash]
+				if !ok {
+					result[tx.Hash] = ""
+				}
+			}
+		}
+
+		offset = offset + int64(len(enderecos))
+	}
+
+	return result
+}
+
+func UnionEnderecosD1_D2(ConnectionMongoDB, DataBaseMongo, CollectionD1, CollectionD2 string) map[string]string {
+	result := map[string]string{}
+	var limit int64 = 1000
+	var offset int64 = 0
+
+	// Busca Transações da Distancia 1
+	for {
+		enderecos := GetAllAddrLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD1)
+
+		if len(enderecos) == 0 {
+			offset = 0
+			break
+		}
+		for _, endereco := range enderecos {
+			for _, tx := range endereco.Txs {
+				for _, addr := range tx.Inputs {
+					_, ok := result[addr.Prev_Out.Addr]
+					if !ok {
+						result[addr.Prev_Out.Addr] = ""
+					}
+				}
+			}
+		}
+
+		offset = offset + int64(len(enderecos))
+	}
+
+	fmt.Println(len(result))
+	// Busca Transações da Distancia 2
+	for {
+		enderecos := GetAllAddrLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD2)
+
+		if len(enderecos) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, endereco := range enderecos {
+			for _, tx := range endereco.Txs {
+				for _, addr := range tx.Inputs {
+					_, ok := result[addr.Prev_Out.Addr]
+					if !ok {
+						result[addr.Prev_Out.Addr] = ""
+					}
+				}
+			}
+		}
+
+		offset = offset + int64(len(enderecos))
+	}
+
+	return result
+}
+
+func ContagemEnderecosTotais(ConnectionMongoDB, DataBaseMongo, CollectionD1, CollectionD2 string) map[string]string {
+	result := map[string]string{}
+	var limit int64 = 100000
+	var offset int64 = 0
+
+	// Busca Transações da Distancia 1
+	for {
+		tx_d1 := GetAllMapClusterLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD1)
+
+		if len(tx_d1) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, item := range tx_d1 {
+			for ch, _ := range item.Clusters {
+				_, ok := result[ch]
+				if !ok {
+					result[ch] = ""
+				}
+			}
+		}
+
+		offset = offset + int64(len(tx_d1))
+	}
+
+	fmt.Println(len(result))
+	// Busca Transações da Distancia 2
+	for {
+		tx_d1 := GetAllMapClusterLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, CollectionD2)
+
+		if len(tx_d1) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, item := range tx_d1 {
+			for ch, _ := range item.Clusters {
+				_, ok := result[ch]
+				if !ok {
+					result[ch] = ""
+				}
+			}
+		}
+
+		offset = offset + int64(len(tx_d1))
+	}
+
+	return result
+}
+
 func GetAddrsByAddress(addr, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
 
 	// Get Client, Context, CalcelFunc and err from connect method.
@@ -950,6 +1166,7 @@ func GetAllMultiAddr(ConnectionMongoDB string, DataBaseMongo string, CollectionR
 
 	return multiAddrs
 }
+
 func UltimoValor(valorReal int, dividendo float32) int {
 	valorRealFracionario := float32(valorReal) / dividendo
 	valorRealInteiro := valorReal / int(dividendo)
@@ -957,6 +1174,7 @@ func UltimoValor(valorReal int, dividendo float32) int {
 	resultado := int(resultadoParcial*dividendo) + 1
 	return resultado
 }
+
 func DividiTransacoesDosEndereco(respostaCompleta Model.Endereco, qtdDivisoes float32) (resultado []Model.Endereco) {
 	tamanho := len(respostaCompleta.Txs)
 	ultimoValor := UltimoValor(tamanho, qtdDivisoes)
