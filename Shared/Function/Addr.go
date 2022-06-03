@@ -719,6 +719,34 @@ func ContagemEnderecosTotais(ConnectionMongoDB, DataBaseMongo, CollectionD1, Col
 	return result
 }
 
+func ContagemEnderecosClusters(ConnectionMongoDB, DataBaseMongo, Collection string) map[string]string {
+	result := map[string]string{}
+	var limit int64 = 2000
+	var offset int64 = 0
+
+	for {
+		tx_d1 := GetAllMapClusterLimitOffset(limit, offset, ConnectionMongoDB, DataBaseMongo, Collection)
+
+		if len(tx_d1) == 0 {
+			offset = 0
+			break
+		}
+
+		for _, item := range tx_d1 {
+			for ch, _ := range item.Clusters {
+				_, ok := result[ch]
+				if !ok {
+					result[ch] = ""
+				}
+			}
+		}
+
+		offset = offset + int64(len(tx_d1))
+	}
+
+	return result
+}
+
 func GetAddrsByAddress(addr, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
 
 	// Get Client, Context, CalcelFunc and err from connect method.

@@ -140,6 +140,60 @@ func GetAllClusterLimitOffset(limit int64, offset int64, ConnectionMongoDB strin
 	return Clusters
 }
 
+func GetAllClusterLimitOffsetToDocs(limit int64, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []interface{}) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var cluster Model.MapCluster
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+		Clusters = append(Clusters, cluster)
+	}
+	return Clusters
+}
+
+func GetAllIdentificadoresLimitOffsetToDocs(limit int64, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []interface{}) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var cluster Model.Identificador
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+		Clusters = append(Clusters, cluster)
+	}
+	return Clusters
+}
+
 func SearchClusters(addr string, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (result []Model.Cluster) {
 	// Get Client, Context, CalcelFunc and err from connect method.
 	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)

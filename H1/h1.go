@@ -4,27 +4,32 @@ import (
 	"Tcc/Shared/Function"
 	"Tcc/Shared/Model"
 	"fmt"
+	"time"
 )
 
 var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 
 var DB_Cluster string = "Cluster"
 
-//var DB_Cluster string = "teste"
-//var Collection_Cluster string = "Distancia1"
 var Collection_Cluster_Map string = "Clusters"
 var Collection_Identificadores string = "Identificadores"
-var limit int64 = 10000000000
+var limit int64 = 2000
+var limit_search int64 = 10000
 var limit_cluster int = 100000
+var pausa int = 100
 
 func main() {
-	h1_Map()
+	AlgorithmH1()
 }
 
-func h1_Map() {
+func AlgorithmH1() {
 
+	enderecos_repetem := GetAddrsRepeat()
 	for {
-		save, err, executeAll := h1_im()
+		fmt.Println("Quantidade de endereços que repetem: ", len(enderecos_repetem))
+		pausa = 100
+		offset := Function.BuscaIndice("offsetClusters.txt")
+		save, err, executeAll := h1(enderecos_repetem, offset)
 		if err {
 			break
 		} else if !save {
@@ -35,9 +40,10 @@ func h1_Map() {
 	}
 }
 
-func h1_im() (save, erro, executeAll bool) {
-	clusters := Function.GetAllMapClustersLimit(limit, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+func h1(enderecos_repetem map[string]string, offset int) (save, erro, executeAll bool) {
+	clusters := Function.GetAllMapClustersLimitOffset(limit, int64(offset), ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
 	tamanho_clusters := len(clusters)
+
 	if tamanho_clusters > 0 {
 		indice_cluster_inicial := Function.BuscaIndice("IndiceCluster.txt")
 		if indice_cluster_inicial >= tamanho_clusters {
@@ -57,77 +63,77 @@ func h1_im() (save, erro, executeAll bool) {
 				fmt.Println(" ---- Tamanho do Mapas de endereços: ", tamanho_map_enderecos)
 				fmt.Println(" ---- Indice do Mapas de endereços: ", indice_map_enderecos)
 				fmt.Println(" ---- Endereço que esta sendo procurado: ", endereco)
-				clusters_que_contem_o_endereco := Function.SearchAddrMapClusters(limit, endereco, identificador_cluster,
-					ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
-				tamanho_clusters_encontrados := len(clusters_que_contem_o_endereco)
 
-				if tamanho_clusters_encontrados > 0 {
-					identificadores := GetIdentificadores(clusters_que_contem_o_endereco)
-					CountCluster(identificador_cluster, identificadores, map_enderecos_resultante,
+				_, ok := enderecos_repetem[endereco]
+				if ok {
+					clusters_que_contem_o_endereco := Function.AllSearchAddrMapClusters(limit_search, endereco, identificador_cluster,
 						ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
-					tamanho_map_enderecos_resultante := len(map_enderecos_resultante)
-					fmt.Println(" ---- Tamanho do Mapa Resultante: ", tamanho_map_enderecos_resultante)
-					if tamanho_map_enderecos_resultante > limit_cluster {
-						// Verificar o tamanho da lista de endereços sem repetição
-						// Se for maior 100000 não une as listas de endereços
-						// Apaga os identificadores qye nao serao usadas
-						// Atualiza os clusters para o identificador novo
-						return ProcessCluster_M1(tamanho_map_enderecos_resultante, identificadores, identificador_cluster,
-							ConnectionMongo, DB_Cluster, Collection_Cluster_Map, Collection_Identificadores)
+					tamanho_clusters_encontrados := len(clusters_que_contem_o_endereco)
+
+					if tamanho_clusters_encontrados > 0 {
+						identificadores := GetIdentificadores(clusters_que_contem_o_endereco)
+						CountCluster(identificador_cluster, identificadores, map_enderecos_resultante,
+							ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+						tamanho_map_enderecos_resultante := len(map_enderecos_resultante)
+						fmt.Println(" ---- Tamanho do Mapa Resultante: ", tamanho_map_enderecos_resultante)
+						if tamanho_map_enderecos_resultante > limit_cluster {
+							// Verificar o tamanho da lista de endereços sem repetição
+							// Se for maior 100000 não une as listas de endereços
+							// Apaga os identificadores qye nao serao usadas
+							// Atualiza os clusters para o identificador novo
+							save, erro, executeAll := ProcessCluster_M1(tamanho_map_enderecos_resultante, identificadores, identificador_cluster,
+								ConnectionMongo, DB_Cluster, Collection_Cluster_Map, Collection_Identificadores)
+							if save {
+								delete(enderecos_repetem, endereco)
+							}
+							return save, erro, executeAll
+						} else {
+							// Se for menor une as listas de endereços
+							// Apaga os identificadores que nao serão usadas
+							// Apaga os clusters que nao serão usadas
+							// Atualiza o tamanho do cluster
+							save, erro, executeAll := ProcessCluster_M2(map_enderecos, map_enderecos_resultante, tamanho_map_enderecos_resultante,
+								identificadores, identificador_cluster, ConnectionMongo, DB_Cluster,
+								Collection_Cluster_Map, Collection_Identificadores)
+							if save {
+								delete(enderecos_repetem, endereco)
+							}
+							return save, erro, executeAll
+						}
 					} else {
-						// Se for menor une as listas de endereços
-						// Apaga os identificadores que nao serão usadas
-						// Apaga os clusters que nao serão usadas
-						// Atualiza o tamanho do cluster
-						return ProcessCluster_M2(map_enderecos, map_enderecos_resultante, tamanho_map_enderecos_resultante,
-							identificadores, identificador_cluster, ConnectionMongo, DB_Cluster,
-							Collection_Cluster_Map, Collection_Identificadores)
+						delete(enderecos_repetem, endereco)
+						fmt.Println(" ---- Somente um cluster contem o endereço: ", endereco)
 					}
 
-					// Criar metodo que sobreescrever o mapa
-					// Criar metodo que sobreescrever o identificador
-					// Criar metodo que apaga os cluster
-					// Criar metodo que apaga os identificadores
+					if indice_map_enderecos == pausa {
+						time.Sleep(time.Second * time.Duration(1))
+						pausa = pausa + 100
+					}
 				} else {
-					fmt.Println(" ---- Somente um cluster contem o endereço: ", endereco)
+					fmt.Println(" O endereço ", endereco, " nao repete")
 				}
 				indice_map_enderecos++
 			}
-
 			Function.IncrementaIndice(indice_cluster, "IndiceCluster.txt")
 		}
+
+		offset = offset + tamanho_clusters
+		Function.DefineIndice(offset, "offsetClusters.txt")
 	} else {
 		fmt.Println(" Não existem clusters")
-		return false, true, false
+		fmt.Println("Definindo offset para zero")
+		Function.DefineIndice(0, "offsetClusters.txt")
+		return true, false, false
 	}
+	fmt.Println("-- FIM --")
 	return false, true, false
 }
 
-// Conta o tamanho do cluster
-func CountCluster(identificador_cluster string, identificadores []string, mapaAtual map[string]string, ConnectionMongo, DB_Cluster, Collection_Cluster_Map string) {
-	identificadoresSeraoBuscados := append([]string{identificador_cluster}, identificadores...)
-	// Contem todos os clusters
-	clusterResultante := Function.SearchAddrMapsClusters(100000000, identificadoresSeraoBuscados, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
-
-	for _, cluster := range clusterResultante {
-		for endereco, _ := range cluster.Clusters {
-			_, ok := mapaAtual[endereco]
-			if ok {
-				continue
-			} else {
-				mapaAtual[endereco] = ""
-			}
-		}
-	}
-}
-
-func GetIdentificadores(clusters_que_contem_o_endereco []Model.MapCluster) (identificadores []string) {
-	for _, identificador := range clusters_que_contem_o_endereco {
-		identificadores = append(identificadores, identificador.Identificador)
-	}
-	return identificadores
-}
-
+/* ProcessCluster_M1
+Apaga os identificadores qye nao serao usadas
+Atualiza os clusters para o identificador novo
+Atualiza o tamanho do cluster
+*/
 func ProcessCluster_M1(tamanho_map_enderecos_resultante int, identificadores []string, identificadorBase, ConnectionMongo, DB_Cluster,
 	Collection_Cluster_Map, Collection_Identificadores string) (save, erro, executeAll bool) {
 	var confirm bool
@@ -171,7 +177,8 @@ func ProcessCluster_M1(tamanho_map_enderecos_resultante int, identificadores []s
 
 }
 
-/* ProcessCluster_M2 Se for menor une as listas de endereços
+/* ProcessCluster_M2
+Une as listas de endereços
 Apaga os identificadores que nao serão usadas
 Apaga os clusters que nao serão usadas
 Atualiza o tamanho do cluster */
@@ -186,16 +193,19 @@ func ProcessCluster_M2(map_endereco_atual, map_enderecos_resultante map[string]s
 		sucesso = true
 	} else {
 		fmt.Println("----------- O cluster atual é diferente do cluster resultante ")
+		fmt.Println("Atualizando o cluster do identificadorBase")
 		sucesso = Function.PutMapCluster(map_enderecos_resultante, identificadorBase, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
 	}
 
 	if sucesso {
-		sucesso = Function.DeleleListIdentificadoresAndClusters(identificadores, ConnectionMongo, DB_Cluster, Collection_Identificadores, Collection_Cluster_Map)
+		fmt.Println("Deletando os outros identificadores")
+		sucesso = Function.DeleteListIdentificadoresAndClusters(identificadores, ConnectionMongo, DB_Cluster, Collection_Identificadores, Collection_Cluster_Map)
 		if !sucesso {
 			fmt.Println(" Erro: Não foi Deletado os identificadores e os Clusters")
 			return false, true, false
 		}
 
+		fmt.Println("Buscando tamanho do identificadorBase")
 		tamanho_identificador_base := Function.GetIdentificadorById(identificadorBase, ConnectionMongo, DB_Cluster, Collection_Identificadores)
 
 		if len(tamanho_identificador_base.Identificador) == 0 || tamanho_identificador_base.TamanhoCluster == 0 {
@@ -224,36 +234,62 @@ func ProcessCluster_M2(map_endereco_atual, map_enderecos_resultante map[string]s
 
 }
 
-//func h1() {
-//	encerraExecucao := false
-//	clusters := Function.GetAllClustersLimit(limit, ConnectionMongo, DB_Cluster, Collection_Cluster)
-//	for indice_cluster, cluster := range clusters {
-//		if encerraExecucao {
-//			break
-//		}
-//		identificador_cluster := cluster.Identificador
-//		list_enderecos := cluster.Clusters
-//		tamanho_list_enderecos := len(list_enderecos)
-//		fmt.Println(" Indice do Cluster: ", indice_cluster)
-//		fmt.Println(" Identificador do Cluster: ", identificador_cluster)
-//		for indice_list_enderecos, endereco := range list_enderecos {
-//			fmt.Println(" ---- Tamanho da lista de endereços: ", tamanho_list_enderecos)
-//			fmt.Println(" ---- Indice da lista de endereços: ", indice_list_enderecos)
-//			fmt.Println(" ---- Endereço que esta sendo procurado: ", endereco)
-//			clusters_contem_o_endereco := Function.SearchAddrClusters(limit, endereco, identificador_cluster,
-//				ConnectionMongo, DB_Cluster, Collection_Cluster)
-//			tamanho_clusters_encontrados := len(clusters_contem_o_endereco)
-//			if tamanho_clusters_encontrados > 0 {
-//				// Verificar o tamanho da lista de endereços sem repetição
-//				// Se for maior 100000 não une as listas de endereços
-//				// Apaga os identificadores qye nao serao usadas
-//				// Atualiza os clusters para o identificador novo
-//				// Se for menor une as listas de endereços
-//				// Apaga os identificadores que nao serão usadas
-//				// Apaga os clusters que nao serão usadas
-//			} else {
-//				fmt.Println(" ---- Somente um cluster contem o endereço: ", endereco)
-//			}
-//		}
-//	}
-//}
+/* GetAddrsRepeat busca os endereços que estão repetidos*/
+func GetAddrsRepeat() map[string]string {
+	enderecos := map[string]int{}
+	result := map[string]string{}
+	limit := 2000
+	offset := 0
+	for {
+		clusters := Function.GetAllMapClustersLimitOffset(int64(limit), int64(offset), ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+
+		tam := len(clusters)
+		if tam == 0 {
+			offset = 0
+			break
+		}
+
+		for _, cluster := range clusters {
+			for ch, _ := range cluster.Clusters {
+				_, ok := enderecos[ch]
+				if ok {
+					if enderecos[ch] == 1 {
+						enderecos[ch] = enderecos[ch] + 1
+						result[ch] = ""
+					}
+				} else {
+					enderecos[ch] = 1
+				}
+			}
+		}
+
+		offset = offset + tam
+	}
+	return result
+}
+
+/* CountCluster Conta o tamanho do cluster*/
+func CountCluster(identificador_cluster string, identificadores []string, mapaAtual map[string]string, ConnectionMongo, DB_Cluster, Collection_Cluster_Map string) {
+	identificadoresSeraoBuscados := append([]string{identificador_cluster}, identificadores...)
+	// Contem todos os clusters
+	clusterResultante := Function.SearchAddrMapsClusters(100000000, identificadoresSeraoBuscados, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+
+	for _, cluster := range clusterResultante {
+		for endereco, _ := range cluster.Clusters {
+			_, ok := mapaAtual[endereco]
+			if ok {
+				continue
+			} else {
+				mapaAtual[endereco] = ""
+			}
+		}
+	}
+}
+
+/* GetIdentificadores transforma os identificadores dos clusters em uma lista de identificadores */
+func GetIdentificadores(clusters_que_contem_o_endereco []Model.MapCluster) (identificadores []string) {
+	for _, identificador := range clusters_que_contem_o_endereco {
+		identificadores = append(identificadores, identificador.Identificador)
+	}
+	return identificadores
+}

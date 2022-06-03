@@ -9,6 +9,24 @@ import (
 )
 
 func main() {
+
+	f := map[string]string{
+		"a": "",
+		"b": "",
+		"c": "",
+	}
+
+	fmt.Println(f)
+
+	l(f)
+
+	fmt.Println(f)
+
+}
+func l(f map[string]string) {
+	delete(f, "a")
+}
+func testt() {
 	colClusters := "clusterTeste"
 	colIdentif := "IdentifTeste"
 	ConnectionMongo := "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
@@ -43,11 +61,7 @@ func main() {
 
 	Function.SaveMapClusters(documentsMapCluster, ConnectionMongo, DB_Cluster, colClusters)
 	Function.SaveIdentificadores(documentsIdentificadores, ConnectionMongo, DB_Cluster, colIdentif)
-	//CreateClusterTeste()
-	//TesteCriacao()
-	//TamUnicoCluster()
 }
-
 func Teste() {
 	Collection_Cluster_Identificadores_1 := "Identificadores_1"
 	Collection_Cluster_Identificadores_2 := "Identificadores_2"

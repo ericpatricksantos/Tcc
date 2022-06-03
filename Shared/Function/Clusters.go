@@ -289,6 +289,48 @@ func GetAllMapClustersLimit(limit int64, ConnectionMongoDB string, DataBaseMongo
 	return Clusters
 }
 
+func GetAllMapClustersLimitOffset(limit, offset int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (Clusters []Model.MapCluster) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		CollectionRecuperaDados, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var cluster Model.MapCluster
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+		Clusters = append(Clusters, cluster)
+	}
+	return Clusters
+}
+
+func AllSearchAddrMapClusters(limit int64, addr, identificadorAtual, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados string) []Model.MapCluster {
+	offset := 0
+	result := []Model.MapCluster{}
+	for {
+		clusters := SearchAddrMapClustersLimitOffset(limit, int64(offset), addr, identificadorAtual, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados)
+		tam := len(clusters)
+		if tam == 0 {
+			break
+		}
+		result = append(result, clusters...)
+		offset = offset + tam
+	}
+	return result
+}
+
 func SearchAddrMapClusters(limit int64, addr string, identificadorAtual, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados string) (result []Model.MapCluster) {
 	// Get Client, Context, CalcelFunc and err from connect method.
 	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
@@ -316,6 +358,57 @@ func SearchAddrMapClusters(limit int64, addr string, identificadorAtual, Connect
 	option = bson.M{}
 
 	cursor, err := Database.QueryLimit(client, ctx, DataBaseMongo, CollectionRecuperaDados, limit, filter, option)
+
+	// handle the errors.
+	if err != nil {
+
+		panic(err)
+	}
+
+	// le os documentos em partes, testei com 1000 documentos e deu certo
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var cluster Model.MapCluster
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+
+		result = append(result, cluster)
+
+	}
+
+	return result
+}
+
+func SearchAddrMapClustersLimitOffset(limit, offset int64, addr string, identificadorAtual, ConnectionMongoDB, DataBaseMongo, CollectionRecuperaDados string) (result []Model.MapCluster) {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter, option interface{}
+
+	// Essa parte esta comentada, pq o valor dos dicionario nao foi preenchido
+	//filter = bson.M{
+	//	"clusters." + addr: addr,
+	//	"identificador":    bson.M{"$ne": identificadorAtual},
+	//}
+	filter = bson.M{
+		"clusters." + addr: "",
+		"identificador":    bson.M{"$ne": identificadorAtual},
+	}
+
+	option = bson.M{}
+
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo, CollectionRecuperaDados, limit, offset, filter, option)
 
 	// handle the errors.
 	if err != nil {
@@ -421,6 +514,40 @@ func DeleteIdentificadoresCluster(identificador string, ConnectionMongoDB string
 	}
 }
 
+func DeleteListIdentificadoresCluster(identificador []string, ConnectionMongoDB string, DataBaseMongo string, Collection string) bool {
+	// Get Client, Context, CalcelFunc and err from connect method.
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+
+	// Free the resource when mainn dunction is  returned
+	defer Database.Close(client, ctx, cancel)
+
+	// create a filter an option of type interface,
+	// that stores bjson objects.
+	var filter interface{}
+
+	// filter  gets all document,
+	// with maths field greater that 70
+	filter = bson.M{
+		"identificador": bson.M{"$in": identificador},
+	}
+
+	cursor, err := Database.DeleteMany(client, ctx, DataBaseMongo, Collection, filter)
+
+	if err != nil {
+
+		panic(err)
+	}
+	// verifica a quantidade de linhas afetadas
+	if cursor.DeletedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func DeleteIdentificadorCluster(identificador string, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
 	existe := CheckItem(ConnectionMongoDB, DataBaseMongo, Collection, "identificador", identificador)
 	if !existe {
@@ -462,20 +589,18 @@ func DeleleListIdentificadoresCluster(identificadores []string, ConnectionMongoD
 	return true
 }
 
-func DeleleListIdentificadoresAndClusters(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores, Collection_Map_Clusters string) (sucesso bool) {
-	var sucess bool
-	for _, elem := range identificadores {
-		sucess = DeleteIdentificadorCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores)
-		if sucess {
-			sucess = DeleteIdentificadorCluster(elem, ConnectionMongoDB, DataBaseMongo, Collection_Map_Clusters)
-			if !sucess {
-				fmt.Println(" Erro: Não foi Deletado os Clusters")
-				return false
-			}
-		} else {
-			fmt.Println(" Erro: Não foi Deletado os identificadores")
+func DeleteListIdentificadoresAndClusters(identificadores []string, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores, Collection_Map_Clusters string) (sucesso bool) {
+
+	sucess := DeleteListIdentificadoresCluster(identificadores, ConnectionMongoDB, DataBaseMongo, Collection_Identificadores)
+	if sucess {
+		sucess = DeleteListIdentificadoresCluster(identificadores, ConnectionMongoDB, DataBaseMongo, Collection_Map_Clusters)
+		if !sucess {
+			fmt.Println(" Erro: Não foi Deletado os Clusters")
 			return false
 		}
+	} else {
+		fmt.Println(" Erro: Não foi Deletado os identificadores")
+		return false
 	}
 	fmt.Println(" Deletado os identificadores e Clusters com Sucesso")
 	return true
@@ -583,6 +708,78 @@ func PutMapClusterResultante(clusterResultante map[string]string, identificador,
 	} else {
 		return false
 	}
+}
+
+func TransfereClustersD1_D2(ConnectionMongoDB, DB1, DB2, CollectionI1, CollectionD1, CollectionI2, CollectionD2, DBR, CollectionIR, CollectionCR string) bool {
+	var limit int64 = 2000
+	var offset int64 = 0
+
+	// Busca Clusters da Distancia 1
+	for {
+		clusters := GetAllClusterLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionD1)
+		identificadores := GetAllIdentificadoresLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionI1)
+
+		if len(clusters) == 0 || len(identificadores) == 0 {
+			offset = 0
+			break
+		}
+
+		conf1 := SaveMapClusters(clusters, ConnectionMongoDB, DBR, CollectionCR)
+		conf2 := SaveMapClusters(identificadores, ConnectionMongoDB, DBR, CollectionIR)
+		if !conf1 || !conf2 {
+			fmt.Println("Erro - 1º For")
+			return false
+		}
+
+		offset = offset + int64(len(clusters))
+	}
+
+	// Busca Clusters da Distancia 2
+	for {
+		clusters := GetAllClusterLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB2, CollectionD2)
+		identificadores := GetAllIdentificadoresLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB2, CollectionI2)
+
+		if len(clusters) == 0 || len(identificadores) == 0 {
+			offset = 0
+			break
+		}
+
+		conf1 := SaveMapClusters(clusters, ConnectionMongoDB, DBR, CollectionCR)
+		conf2 := SaveMapClusters(identificadores, ConnectionMongoDB, DBR, CollectionIR)
+		if !conf1 || !conf2 {
+			fmt.Println("Erro - 2º For")
+			return false
+		}
+
+		offset = offset + int64(len(clusters))
+	}
+
+	return true
+}
+
+func TransfereClusters(ConnectionMongoDB, DB1, CollectionI1, CollectionD1, DBR, CollectionIR, CollectionCR string) bool {
+	var limit int64 = 2000
+	var offset int64 = 0
+
+	for {
+		clusters := GetAllClusterLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionD1)
+		identificadores := GetAllIdentificadoresLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionI1)
+
+		if len(clusters) == 0 || len(identificadores) == 0 {
+			offset = 0
+			break
+		}
+
+		conf1 := SaveMapClusters(clusters, ConnectionMongoDB, DBR, CollectionCR)
+		conf2 := SaveMapClusters(identificadores, ConnectionMongoDB, DBR, CollectionIR)
+		if !conf1 || !conf2 {
+			fmt.Println("Erro - 1º For")
+			return false
+		}
+
+		offset = offset + int64(len(clusters))
+	}
+	return true
 }
 
 // Identificadores

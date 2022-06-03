@@ -8,27 +8,17 @@ import (
 )
 
 var limit int64 = 100
-
-//var allAddr int = 4
-
 var ConnectionMongo string = "mongodb://127.0.0.1:27017/"
-
-//var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
 var DB_Endereco string = "Endereco"
-
-//var DB_Endereco string = "teste"
-
 var DB_Cluster string = "Cluster"
 
-//var DB_Cluster string = "teste"
-
 func main() {
-	//ContagemEnderecosTotais()
-	VerificaEnderecosTotais()
-	//CreateClustersDistancia2_Map()
+	fmt.Println("Iniciando a criação dos clusters das transações da Distancia 1")
+	CreateClustersDistancia1_Map()
+	fmt.Println("Iniciando a criação dos clusters das transações da Distancia 2")
+	CreateClustersDistancia2_Map()
 }
 
-// em uso
 func CreateClustersDistancia1_Map() {
 	encerraExecucao := false
 	Collection_Distancia1 := "Farao"
@@ -99,29 +89,6 @@ func CreateClustersDistancia1_Map() {
 	}
 }
 
-// em uso
-func VerificaCreateClustersDistancia1_Map() {
-	colDist1 := "Distancia1"
-	clusters := Function.GetAllMapClustersLimit(100000, ConnectionMongo, DB_Cluster, colDist1)
-	mapas := map[string]string{}
-
-	for _, cluster := range clusters {
-		for endereco, _ := range cluster.Clusters {
-			_, ok := mapas[endereco]
-			if ok {
-				continue
-			} else {
-				mapas[endereco] = endereco
-			}
-		}
-	}
-
-	if len(mapas) == 6528 {
-		fmt.Println(" Correto")
-	}
-}
-
-// Em uso
 func CreateClustersDistancia2_Map() {
 
 	hashDel, _ := Function.LerTexto("hashParaDeletar.txt")
@@ -279,189 +246,4 @@ func CreateClustersDistancia2_Map() {
 		fmt.Println()
 		fmt.Println("Fim criação de clusters")
 	}
-}
-
-func VerificaQtdTransacoesTotais() {
-	v := Function.UnionHashTransacaoD1_D2(ConnectionMongo, DB_Endereco, "Farao", "Distancia1")
-	// Distancia 1 - 278 transações/clusters
-	// Distancia 2 - 633314 transações/clusters
-
-	// Total 633592 transações/clusters
-	fmt.Println(len(v))
-}
-
-func VerificaEnderecosTotais() {
-	v := Function.UnionEnderecosD1_D2(ConnectionMongo, DB_Endereco, "Farao", "Distancia1")
-	// Distancia 1 -  6528 endereços
-	// Distancia 2 - 1524003 endereços
-
-	// Total 1530531 endereços
-	fmt.Println(len(v))
-}
-
-func ContagemEnderecosTotais() {
-	r := Function.ContagemEnderecosTotais(ConnectionMongo, DB_Cluster, "Distancia1", "Distancia2")
-
-	// Total 1530531 endereços distancia 1 e 2
-	fmt.Println(len(r))
-}
-
-func CreateClustersDistancia1() {
-	encerraExecucao := false
-	Collection_Distancia1 := "Farao"
-	Collection_Cluster_Identificadores := "Identificadores_1"
-	Collection_Cluster_Distancia1 := "Distancia1"
-	// as transações dos endereços do faráo estão na distancia 1
-	txs_endereco_farao := Function.GetAllAddr(ConnectionMongo, DB_Endereco, Collection_Distancia1)
-
-	for _, endereco_farao := range txs_endereco_farao {
-		if encerraExecucao {
-			break
-		}
-
-		for _, tx := range endereco_farao.Txs {
-			if encerraExecucao {
-				break
-			}
-
-			hashTransacao := tx.Hash
-			existeCluster := Function.CheckCluster(ConnectionMongo, DB_Cluster,
-				Collection_Cluster_Identificadores, "identificador", hashTransacao)
-			if existeCluster {
-				fmt.Println(" Existe um cluster com essa transação: ", hashTransacao)
-				fmt.Println(" Passa para a próxima transação")
-			} else {
-				cluster := Model.Clusters{
-					Identificador: hashTransacao,
-					Clusters:      []string{},
-				}
-				for _, input := range tx.Inputs {
-					endereco_input := input.Prev_Out.Addr
-					existeEndereco := Function.Contains(cluster.Clusters, endereco_input)
-					if existeEndereco {
-						fmt.Println(" -------- O endereco: ", endereco_input,
-							" existe no cluster (Lista da endereços) -----")
-					} else {
-						cluster.Clusters = append(cluster.Clusters, endereco_input)
-						fmt.Println(" -------- O endereco: ", endereco_input,
-							" foi adicionado no cluster (Lista da endereços) -----")
-					}
-				}
-
-				identificadorCluster := Model.Identificador{
-					Identificador:  hashTransacao,
-					TamanhoCluster: len(cluster.Clusters),
-				}
-
-				confirmSalveCluster := Function.SalvaCluster(cluster, ConnectionMongo, DB_Cluster, Collection_Cluster_Distancia1)
-				if confirmSalveCluster {
-					confirmSalveIdentificadorCluster := Function.SalvaIdentificadorCluster(identificadorCluster, ConnectionMongo, DB_Cluster, Collection_Cluster_Identificadores)
-					if confirmSalveIdentificadorCluster {
-						fmt.Println(" Salvo com sucesso o cluster e o seu identificador: ", hashTransacao)
-					} else {
-						fmt.Println(" Finaliza Execução: Erro o cluster e o identificador não foram salvos", hashTransacao)
-						encerraExecucao = true
-						break
-					}
-				} else {
-					fmt.Println(" Finaliza Execução, Erro o cluster não foi salvo: ", hashTransacao)
-					encerraExecucao = true
-					break
-				}
-			}
-		}
-
-	}
-}
-
-func CreateClustersDistancia2() {
-	encerraExecucao := false
-	Collection_Distancia1 := "Distancia"
-	Collection_Cluster_Identificadores_1 := "Identificadores_1"
-	Collection_Cluster_Identificadores_2 := "Identificadores_2"
-	Collection_Cluster_Distancia2 := "Distancia2"
-	// as transações dos endereços do faráo estão na distancia 1
-	txs_endereco_farao := Function.GetAllAddr(ConnectionMongo, DB_Endereco, Collection_Distancia1)
-
-	for _, endereco_farao := range txs_endereco_farao {
-		if encerraExecucao {
-			break
-		}
-
-		for _, tx := range endereco_farao.Txs {
-			if encerraExecucao {
-				break
-			}
-
-			hashTransacao := tx.Hash
-			existeCluster_1 := Function.CheckCluster(ConnectionMongo, DB_Cluster,
-				Collection_Cluster_Identificadores_1, "identificador", hashTransacao)
-			existeCluster_2 := Function.CheckCluster(ConnectionMongo, DB_Cluster,
-				Collection_Cluster_Identificadores_2, "identificador", hashTransacao)
-			if existeCluster_1 || existeCluster_2 {
-				fmt.Println(" Existe um cluster com essa transação: ", hashTransacao)
-				fmt.Println(" Passa para a próxima transação")
-			} else {
-				cluster := Model.Clusters{
-					Identificador: hashTransacao,
-					Clusters:      []string{},
-				}
-				for _, input := range tx.Inputs {
-					endereco_input := input.Prev_Out.Addr
-					existeEndereco := Function.Contains(cluster.Clusters, endereco_input)
-					if existeEndereco {
-						fmt.Println(" -------- O endereco: ", endereco_input,
-							" existe no cluster (Lista da endereços) -----")
-					} else {
-						cluster.Clusters = append(cluster.Clusters, endereco_input)
-						fmt.Println(" -------- O endereco: ", endereco_input,
-							" foi adicionado no cluster (Lista da endereços) -----")
-					}
-				}
-
-				identificadorCluster := Model.Identificador{
-					Identificador:  hashTransacao,
-					TamanhoCluster: len(cluster.Clusters),
-				}
-
-				confirmSalveCluster := Function.SalvaCluster(cluster, ConnectionMongo, DB_Cluster, Collection_Cluster_Distancia2)
-				if confirmSalveCluster {
-					confirmSalveIdentificadorCluster := Function.SalvaIdentificadorCluster(identificadorCluster, ConnectionMongo, DB_Cluster, Collection_Cluster_Identificadores_2)
-					if confirmSalveIdentificadorCluster {
-						fmt.Println(" Salvo com sucesso o cluster e o seu identificador: ", hashTransacao)
-					} else {
-						fmt.Println(" Finaliza Execução: Erro o cluster e o identificador não foram salvos", hashTransacao)
-						encerraExecucao = true
-						break
-					}
-				} else {
-					fmt.Println(" Finaliza Execução, Erro o cluster não foi salvo: ", hashTransacao)
-					encerraExecucao = true
-					break
-				}
-			}
-		}
-
-	}
-}
-
-func VerificaQtdEnderecosDistancia1() {
-	colDist1 := "Distancia1"
-	clusters := Function.GetAllClustersLimit(100000, ConnectionMongo, DB_Cluster, colDist1)
-	lista := []string{}
-
-	for _, cluster := range clusters {
-		for _, endereco := range cluster.Clusters {
-			check := Function.Contains(lista, endereco)
-			if check {
-				continue
-			} else {
-				lista = append(lista, endereco)
-			}
-		}
-	}
-	if len(lista) == 6528 {
-		fmt.Println(" Correto")
-	}
-
 }
