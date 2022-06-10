@@ -26,7 +26,11 @@ func AlgorithmH1() {
 
 	enderecos_repetem := GetAddrsRepeat()
 	for {
-		fmt.Println("Quantidade de endereços que repetem: ", len(enderecos_repetem))
+		tam := len(enderecos_repetem)
+		fmt.Println("Quantidade de endereços que repetem: ", tam)
+		if tam == 0 {
+			break
+		}
 		pausa = 100
 		offset := Function.BuscaIndice("offsetClusters.txt")
 		save, err, executeAll := h1(enderecos_repetem, offset)
@@ -126,7 +130,7 @@ func h1(enderecos_repetem map[string]string, offset int) (save, erro, executeAll
 		return true, false, false
 	}
 	fmt.Println("-- FIM --")
-	return false, true, false
+	return true, false, false
 }
 
 /* ProcessCluster_M1
@@ -137,22 +141,20 @@ Atualiza o tamanho do cluster
 func ProcessCluster_M1(tamanho_map_enderecos_resultante int, identificadores []string, identificadorBase, ConnectionMongo, DB_Cluster,
 	Collection_Cluster_Map, Collection_Identificadores string) (save, erro, executeAll bool) {
 	var confirm bool
-
-	for _, elem := range identificadores {
-		confirm = Function.PutIdentificador(identificadorBase, elem, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+	confirm = Function.PutIdentificadores(identificadorBase, identificadores, ConnectionMongo, DB_Cluster, Collection_Cluster_Map)
+	if confirm {
+		confirm = Function.DeleteListIdentificadoresCluster(identificadores, ConnectionMongo, DB_Cluster, Collection_Identificadores)
 		if confirm {
-			confirm = Function.DeleteIdentificadoresCluster(elem, ConnectionMongo, DB_Cluster, Collection_Identificadores)
-			if confirm {
-				fmt.Println(" Atualizado o identificador e deletado os identificadores")
-			} else {
-				fmt.Println(" Erro: Não foi Atualizado o identificador e deletado os identificadores")
-				return false, true, false
-			}
+			fmt.Println(" Atualizado o identificador e deletado os identificadores")
 		} else {
-			fmt.Println(" Erro: Não foi Atualizado os identificadores: ", identificadores, " para o identificador: ", identificadorBase)
+			fmt.Println(" Erro: Não foi Atualizado o identificador e deletado os identificadores")
 			return false, true, false
 		}
+	} else {
+		fmt.Println(" Erro: Não foi Atualizado os identificadores: ", identificadores, " para o identificador: ", identificadorBase)
+		return false, true, false
 	}
+
 	tamanho_identificador_base := Function.GetIdentificadorById(identificadorBase, ConnectionMongo, DB_Cluster, Collection_Identificadores)
 
 	if len(tamanho_identificador_base.Identificador) == 0 || tamanho_identificador_base.TamanhoCluster == 0 {
@@ -236,7 +238,7 @@ func ProcessCluster_M2(map_endereco_atual, map_enderecos_resultante map[string]s
 
 /* GetAddrsRepeat busca os endereços que estão repetidos*/
 func GetAddrsRepeat() map[string]string {
-	enderecos := map[string]int{}
+	enderecos := map[string]Model.AddrsRepeat{}
 	result := map[string]string{}
 	limit := 2000
 	offset := 0
@@ -253,12 +255,19 @@ func GetAddrsRepeat() map[string]string {
 			for ch, _ := range cluster.Clusters {
 				_, ok := enderecos[ch]
 				if ok {
-					if enderecos[ch] == 1 {
-						enderecos[ch] = enderecos[ch] + 1
+					if enderecos[ch].Qtd == 1 && enderecos[ch].Identificador != cluster.Identificador {
+						qtd := enderecos[ch].Qtd + 1
+						enderecos[ch] = Model.AddrsRepeat{
+							qtd,
+							"+",
+						}
 						result[ch] = ""
 					}
 				} else {
-					enderecos[ch] = 1
+					enderecos[ch] = Model.AddrsRepeat{
+						1,
+						cluster.Identificador,
+					}
 				}
 			}
 		}
@@ -288,8 +297,15 @@ func CountCluster(identificador_cluster string, identificadores []string, mapaAt
 
 /* GetIdentificadores transforma os identificadores dos clusters em uma lista de identificadores */
 func GetIdentificadores(clusters_que_contem_o_endereco []Model.MapCluster) (identificadores []string) {
+	evitar_repeticao := map[string]string{}
 	for _, identificador := range clusters_que_contem_o_endereco {
-		identificadores = append(identificadores, identificador.Identificador)
+		_, ok := evitar_repeticao[identificador.Identificador]
+		if ok {
+			continue
+		} else {
+			evitar_repeticao[identificador.Identificador] = ""
+			identificadores = append(identificadores, identificador.Identificador)
+		}
 	}
 	return identificadores
 }

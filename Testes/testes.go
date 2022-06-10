@@ -8,21 +8,82 @@ import (
 	"strconv"
 )
 
-func main() {
+var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
+var DB_Cluster string = "teste"
+var Collection_Identificadores string = "IdenT"
+var Collection_Cluster string = "ClusT"
 
-	f := map[string]string{
-		"a": "",
-		"b": "",
-		"c": "",
+func main() {
+	fmt.Println("Teste")
+}
+
+func TesteFun() {
+
+	clusters := []interface{}{
+		Model.MapCluster{
+			Identificador: "B",
+			Clusters:      map[string]string{"A": "", "B": ""},
+		}, Model.MapCluster{
+			Identificador: "C",
+			Clusters:      map[string]string{"C": "", "B": ""},
+		}, Model.MapCluster{
+			Identificador: "B",
+			Clusters:      map[string]string{"Q": "", "W": ""},
+		}, Model.MapCluster{
+			Identificador: "C",
+			Clusters:      map[string]string{"R": "", "T": ""},
+		}, Model.MapCluster{
+			Identificador: "A",
+			Clusters:      map[string]string{"Q": "", "R": ""},
+		}, Model.MapCluster{
+			Identificador: "Z",
+			Clusters:      map[string]string{"Q": "", "R": ""},
+		},
+	}
+	iden := []interface{}{
+		Model.Identificador{
+			Identificador:  "B",
+			TamanhoCluster: 1,
+		}, Model.Identificador{
+			Identificador:  "C",
+			TamanhoCluster: 2,
+		}, Model.Identificador{
+			Identificador:  "B",
+			TamanhoCluster: 2,
+		}, Model.Identificador{
+			Identificador:  "C",
+			TamanhoCluster: 3,
+		}, Model.Identificador{
+			Identificador:  "A",
+			TamanhoCluster: 5,
+		}, Model.Identificador{
+			Identificador:  "Z",
+			TamanhoCluster: 5,
+		},
 	}
 
-	fmt.Println(f)
+	Function.SaveMapClusters(clusters,
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		DB_Cluster, Collection_Cluster)
 
-	l(f)
+	Function.SaveMapClusters(iden,
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		DB_Cluster, Collection_Identificadores)
 
-	fmt.Println(f)
-
+	var confirm bool
+	confirm = Function.PutIdentificadores("A", []string{"B", "C", "B", "C"}, ConnectionMongo, DB_Cluster, Collection_Cluster)
+	if confirm {
+		confirm = Function.DeleteListIdentificadoresCluster([]string{"B", "C", "B", "C"}, ConnectionMongo, DB_Cluster, Collection_Identificadores)
+		if confirm {
+			fmt.Println(" Atualizado o identificador e deletado os identificadores")
+		} else {
+			fmt.Println(" Erro: Não foi Atualizado o identificador e deletado os identificadores")
+		}
+	} else {
+		fmt.Println("Erro 22")
+	}
 }
+
 func l(f map[string]string) {
 	delete(f, "a")
 }
@@ -62,6 +123,7 @@ func testt() {
 	Function.SaveMapClusters(documentsMapCluster, ConnectionMongo, DB_Cluster, colClusters)
 	Function.SaveIdentificadores(documentsIdentificadores, ConnectionMongo, DB_Cluster, colIdentif)
 }
+
 func Teste() {
 	Collection_Cluster_Identificadores_1 := "Identificadores_1"
 	Collection_Cluster_Identificadores_2 := "Identificadores_2"
@@ -197,4 +259,43 @@ func TamUnicoCluster() {
 
 	x := len(clusters[0].Clusters)
 	fmt.Println(x)
+}
+
+func Correcao() {
+	// indice do cluster = 1162
+	// offset = 190000
+	//identificador = ccea8c5237e5cc07c870d3e3c18104492f858804a6e722cbfea11091f2c9fd49
+	tamanho_identificador_base := Function.GetIdentificadorById("ccea8c5237e5cc07c870d3e3c18104492f858804a6e722cbfea11091f2c9fd49", "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"Cluster", "Identificadores")
+
+	fmt.Println(tamanho_identificador_base)
+	identificador := []string{"ccea8c5237e5cc07c870d3e3c18104492f858804a6e722cbfea11091f2c9fd49"}
+
+	clusters := Function.SearchAddrMapsClusters(1000000, identificador, "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"Cluster", "Clusters")
+	tamanho_cluster := map[string]string{}
+	for _, item := range clusters {
+		for endereco, _ := range item.Clusters {
+			_, ok := tamanho_cluster[endereco]
+			if ok {
+				continue
+			} else {
+				tamanho_cluster[endereco] = ""
+			}
+		}
+	}
+	g := len(tamanho_cluster)
+	fmt.Println(g)
+
+	confirm := Function.PutTamanhoCluster(g, "ccea8c5237e5cc07c870d3e3c18104492f858804a6e722cbfea11091f2c9fd49",
+		"mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"Cluster", "Identificadores")
+	if confirm {
+		fmt.Println("certo")
+	}
+
+	tamanho_identificador_base = Function.GetIdentificadorById("ccea8c5237e5cc07c870d3e3c18104492f858804a6e722cbfea11091f2c9fd49", "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb",
+		"Cluster", "Identificadores")
+
+	fmt.Println(tamanho_identificador_base)
 }

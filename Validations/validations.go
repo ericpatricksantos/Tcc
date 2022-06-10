@@ -13,8 +13,9 @@ var DB_Cluster string = "Cluster"
 var Collection_Cluster_Map string = "Clusters"
 
 func main() {
-	// validei o backup 03/06/2022
 	VerificaEnderecosTotaisClusters()
+
+	ContagemIdentificadores()
 }
 
 func TransferindoProd() {
@@ -41,7 +42,7 @@ func ContagemEnderecosTotais() {
 }
 
 func VerificaEnderecosTotaisClusters() {
-	f := Function.ContagemEnderecosClusters(ConnectionMongo, "Backup", "Clusters1")
+	f := Function.ContagemEnderecosClusters(ConnectionMongo, "Cluster", "Clusters")
 	// Total 1530531 endereços
 	fmt.Println(len(f))
 }
@@ -229,8 +230,7 @@ func ContEnderecosCluster() {
 	fmt.Println(len(v))
 }
 
-func VerificaEnderecosTotaisClusters_V2() {
-	f := Function.ContagemEnderecosClusters(ConnectionMongo, "Cluster", "Clusters")
-	// Total 1530531 endereços
+func ContagemIdentificadores() {
+	f := Function.ContagemIdentificadoresClusters(ConnectionMongo, "Cluster", "Clusters")
 	fmt.Println(len(f))
 }

@@ -638,6 +638,38 @@ func PutIdentificador(identificadorBase, identificadorModificado, ConnectionMong
 	}
 }
 
+func PutIdentificadores(identificadorBase string, identificadorModificados []string, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
+
+	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+	if errou != nil {
+		return false
+	}
+
+	Database.Ping(cliente, contexto)
+	defer Database.Close(cliente, contexto, cancel)
+
+	var result *mongo.UpdateResult
+	var err error
+
+	filter := bson.M{
+		"identificador": bson.M{"$in": identificadorModificados},
+	}
+	update := bson.M{"$set": bson.M{"identificador": identificadorBase}}
+
+	result, err = Database.UpdateMany(cliente, contexto, DataBaseMongo, Collection, filter, update)
+
+	// handle the error
+	if err != nil {
+		return false
+	}
+
+	if result.ModifiedCount > 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func PutTamanhoCluster(tamanho_map_enderecos_resultante int, identificadorBase, ConnectionMongoDB, DataBaseMongo, Collection string) bool {
 
 	cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
@@ -763,23 +795,64 @@ func TransfereClusters(ConnectionMongoDB, DB1, CollectionI1, CollectionD1, DBR, 
 
 	for {
 		clusters := GetAllClusterLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionD1)
-		identificadores := GetAllIdentificadoresLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionI1)
 
-		if len(clusters) == 0 || len(identificadores) == 0 {
+		if len(clusters) == 0 {
 			offset = 0
 			break
 		}
 
 		conf1 := SaveMapClusters(clusters, ConnectionMongoDB, DBR, CollectionCR)
-		conf2 := SaveMapClusters(identificadores, ConnectionMongoDB, DBR, CollectionIR)
-		if !conf1 || !conf2 {
-			fmt.Println("Erro - 1º For")
+		if !conf1 {
+			fmt.Println("Erro - 1º")
 			return false
+		}
+		offset = offset + int64(len(clusters))
+	}
+
+	for {
+		identificadores := GetAllIdentificadoresLimitOffsetToDocs(limit, offset, ConnectionMongoDB, DB1, CollectionI1)
+
+		if len(identificadores) == 0 {
+			offset = 0
+			break
+		}
+
+		conf2 := SaveMapClusters(identificadores, ConnectionMongoDB, DBR, CollectionIR)
+
+		if !conf2 {
+			fmt.Println("Erro - 2º")
+			return false
+		}
+
+		offset = offset + int64(len(identificadores))
+	}
+
+	return true
+}
+
+func ContagemIdentificadoresClusters(ConnectionMongoDB, DB1, CollectionCluster string) map[string]string {
+	var limit int64 = 2000
+	var offset int64 = 0
+	result := map[string]string{}
+	for {
+		clusters := GetAllMapClustersLimitOffset(limit, offset, ConnectionMongoDB, DB1, CollectionCluster)
+
+		if len(clusters) == 0 {
+			offset = 0
+			break
+		}
+		for _, cluster := range clusters {
+			_, ok := result[cluster.Identificador]
+			if ok {
+				continue
+			} else {
+				result[cluster.Identificador] = ""
+			}
 		}
 
 		offset = offset + int64(len(clusters))
 	}
-	return true
+	return result
 }
 
 // Identificadores
