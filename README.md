@@ -19,15 +19,12 @@ Algoritmo heurístico baseado nos endereços de entradas das transações, heur�
 
 ## Passo a Passo para executar o projeto
 
-1º Criação dos arquivos para salvar o estado de execução da aplicação
-   * Esses arquivos devem ser criados na pasta ApplicationStateFile
-
-2º Criação de um arquivo txt contendo os endereços iniciais
+1º Criação de um arquivo txt contendo os endereços iniciais
    Exemplo: enderecosIniciais.txt
 
-3º Preenchimento das variáveis iniciais que estão em cada arquivo de execução
+2º Preenchimento das variáveis iniciais que estão em cada arquivo de execução
 
-4º Ordem de execução das funções principais
+3º Ordem de execução das funções principais
 
  * Primeiro executa a saveTxs para salvar as transações dos endereços especificados.
  * Em seguida, executa a saveClusters para criar os clusters das transações
