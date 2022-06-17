@@ -20,6 +20,7 @@ Algoritmo heurístico baseado nos endereços de entradas das transações, heur�
 ## Passo a Passo para executar o projeto
 
 1º Criação dos arquivos para salvar o estado de execução da aplicação
+   * Esses arquivos devem ser salvos na pasta ApplicationStateFile
 
 2º Preenchimento das variáveis iniciais que estão em cada arquivo de execução
 
