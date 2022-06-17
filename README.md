@@ -24,11 +24,14 @@ Algoritmo heurístico baseado nos endereços de entradas das transações, heur�
 
 2º Preenchimento das variáveis iniciais que estão em cada arquivo de execução
 
-3º Execução das funções principais
+3º Ordem de execução das funções principais
 
  * Primeiro executa a saveTxs para salvar as transações dos endereços especificados.
  * Em seguida, executa a saveClusters para criar os clusters das transações
  * Por último, executa o H1 para aplicar o algoritmo H1.
+
+
+
 
 
 
