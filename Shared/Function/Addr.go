@@ -442,6 +442,23 @@ func GetAllAddr(ConnectionMongoDB string, DataBaseMongo string, CollectionRecupe
 	return addrs
 }
 
+func GetAllAddrs(ConnectionMongoDB, DB1, CollectionCluster string) []Model.Endereco {
+	var limit int64 = 2000
+	var offset int64 = 0
+	result := []Model.Endereco{}
+	for {
+		addrs := GetAllAddrLimitOffset(limit, offset, ConnectionMongoDB, DB1, CollectionCluster)
+
+		if len(addrs) == 0 {
+			offset = 0
+			break
+		}
+		result = append(result, addrs...)
+		offset = offset + int64(len(addrs))
+	}
+	return result
+}
+
 func GetAllAddrLimit(limit int64, ConnectionMongoDB string, DataBaseMongo string, CollectionRecuperaDados string) (addrs []Model.Endereco) {
 
 	// Get Client, Context, CalcelFunc and err from connect method.

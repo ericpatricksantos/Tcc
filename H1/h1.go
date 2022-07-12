@@ -7,16 +7,29 @@ import (
 	"time"
 )
 
-var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
-
-var DB_Cluster string = "Cluster"
-
-var Collection_Cluster_Map string = "Clusters"
-var Collection_Identificadores string = "Identificadores"
+var applicationStateFile = "./ApplicationStateFile/"
+var ConnectionMongo string
+var DB_Cluster string
+var Collection_Cluster_Map string
+var Collection_Identificadores string
 var limit int64 = 2000
 var limit_search int64 = 10000
 var limit_cluster int = 100000
 var pausa int = 100
+var offsetClusters string
+var indiceCluster string
+
+func init() {
+	offsetClusters = applicationStateFile + "offsetClusters.txt" // Arquivo usado para pula os clusters processados
+	indiceCluster = applicationStateFile + "IndiceCluster.txt"   // Arquivo usado para salvar o indice do cluster que esta sendo processado
+	ConnectionMongo = "mongodb://127.0.0.1:27017/"
+	DB_Cluster = "Testando"                        // Database do Cluster
+	Collection_Cluster_Map = "Clusters"            // Collection que contem os clusters
+	Collection_Identificadores = "Identificadores" // Collection que contem os identificadores do clusters
+
+	fmt.Println("Criando os arquivos da aplicação")
+	Function.CreateListFile([]string{offsetClusters, indiceCluster})
+}
 
 func main() {
 	AlgorithmH1()
@@ -32,7 +45,7 @@ func AlgorithmH1() {
 			break
 		}
 		pausa = 100
-		offset := Function.BuscaIndice("offsetClusters.txt")
+		offset := Function.BuscaIndice(offsetClusters)
 		save, err, executeAll := h1(enderecos_repetem, offset)
 		if err {
 			break
@@ -49,10 +62,10 @@ func h1(enderecos_repetem map[string]string, offset int) (save, erro, executeAll
 	tamanho_clusters := len(clusters)
 
 	if tamanho_clusters > 0 {
-		indice_cluster_inicial := Function.BuscaIndice("IndiceCluster.txt")
+		indice_cluster_inicial := Function.BuscaIndice(indiceCluster)
 		if indice_cluster_inicial >= tamanho_clusters {
 			indice_cluster_inicial = 0
-			Function.DefineIndice(0, "IndiceCluster.txt")
+			Function.DefineIndice(0, indiceCluster)
 		}
 		for indice_cluster := indice_cluster_inicial; indice_cluster < tamanho_clusters; indice_cluster++ {
 
@@ -118,15 +131,15 @@ func h1(enderecos_repetem map[string]string, offset int) (save, erro, executeAll
 				}
 				indice_map_enderecos++
 			}
-			Function.IncrementaIndice(indice_cluster, "IndiceCluster.txt")
+			Function.IncrementaIndice(indice_cluster, indiceCluster)
 		}
 
 		offset = offset + tamanho_clusters
-		Function.DefineIndice(offset, "offsetClusters.txt")
+		Function.DefineIndice(offset, offsetClusters)
 	} else {
 		fmt.Println(" Não existem clusters")
 		fmt.Println("Definindo offset para zero")
-		Function.DefineIndice(0, "offsetClusters.txt")
+		Function.DefineIndice(0, offsetClusters)
 		return true, false, false
 	}
 	fmt.Println("-- FIM --")

@@ -8,6 +8,37 @@ import (
 	"strconv"
 )
 
+func ExistsFile(caminho string) bool {
+	_, erro := os.Stat(caminho)
+	if erro != nil {
+		return false
+	}
+	return true
+}
+
+func CreateFile(caminho string) bool {
+	if ExistsFile(caminho) {
+		return true
+	} else {
+		arquivo, err := os.Create(caminho)
+		if err != nil {
+			panic(err)
+		}
+		defer arquivo.Close()
+		return true
+	}
+}
+
+func CreateListFile(caminhos []string) bool {
+	for _, item := range caminhos {
+		confirm := CreateFile(item)
+		if !confirm {
+			return confirm
+		}
+	}
+	return true
+}
+
 // LerTexto Funcao que le o conteudo do arquivo e retorna um slice the string com todas as linhas do arquivo
 func LerTexto(caminhoDoArquivo string) ([]string, error) {
 	// Abre o arquivo

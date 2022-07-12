@@ -9,12 +9,29 @@ import (
 )
 
 var ConnectionMongo string = "mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb"
-var DB_Cluster string = "teste"
-var Collection_Identificadores string = "IdenT"
-var Collection_Cluster string = "ClusT"
+var DB_Cluster string = "Cluster"
+var Collection_Identificadores string = "Identificadores"
+var Collection_Cluster string = "Clusters"
 
 func main() {
-	fmt.Println("Teste")
+	BuscaCLusterEnderecosIniciais()
+}
+
+func BuscaCLusterEnderecosIniciais() {
+	// 1JawWE56G5NmnB5iuYbFikbdETs88Fxkwo 88592 - antes 6287
+	// bc1qluuy04mjxqj8yc44lgnez8eml4pwulvukfatak 1
+	// bc1qt7jjpqdfvqhtqkadlnuhzzem2tateg7mm0y95w 0
+	// bc1q8kmtzc0a43w0cjrzwzwqsa9frxaseyzcg6mq3d 2 - mesmo
+	// bc1qqgjmxevtn3cyg8cvxfg7yyk6a7n3zudt4hw85t 2
+	// bc1qn9k6s0lyxgw5mdndta3780md23z9kmu4980clv 2 - mesmo
+	// bc1qu9tj6kcusrncvm7wm06n2mqq0jtfg26vk9mynm 3 - mesmo 2º
+	// bc1qnanyweuswqm9sz3d93ag0vrc69mpq4v40g9acq 2
+	// bc1qehzj8sulj3plzuarzzmdm77d6rd8chvc5hzull 3 - mesmo 2º
+	clusters_que_contem_o_endereco := Function.AllSearchAddrMapClusters(2000,
+		"bc1qehzj8sulj3plzuarzzmdm77d6rd8chvc5hzull", "",
+		ConnectionMongo, DB_Cluster, Collection_Cluster)
+
+	fmt.Println(clusters_que_contem_o_endereco)
 }
 
 func TesteFun() {

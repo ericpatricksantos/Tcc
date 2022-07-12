@@ -291,29 +291,45 @@ func ProcessAdressesAnalysis(ConnectionMongoDB, DataBaseAnalise, CollectionAnali
 
 	return false
 }
-
+func ToAddrAnalisados(allAddrs []Model.AddressAnalisado, addrsBaixados []Model.Endereco) map[string]string {
+	addrsBaixadosMap := map[string]string{}
+	result := map[string]string{}
+	for _, item := range addrsBaixados {
+		addrsBaixadosMap[item.Address] = item.Address
+	}
+	for _, item := range allAddrs {
+		_, ok := addrsBaixadosMap[item.Address]
+		if ok {
+			continue
+		} else {
+			result[item.Address] = item.Address
+		}
+	}
+	return result
+}
 func ProcessAdressesAnalysis_v2(ConnectionMongoDB, DataBaseAnalise, CollectionAnaliseAwaitingProcessing, DataBaseAddr, CollectionAddr, urlAPI, RawAddr string) bool {
 	fmt.Println("Buscando todos os Endereços que serão analisados")
-	addrAnalisados := GetAllAddrAnalisado(ConnectionMongoDB, DataBaseAnalise, CollectionAnaliseAwaitingProcessing)
+	allAddrs := GetAllAddrAnalisado(ConnectionMongoDB, DataBaseAnalise, CollectionAnaliseAwaitingProcessing)
+	addrsBaixados := GetAllAddrs(ConnectionMongoDB, DataBaseAnalise, CollectionAddr)
+
+	addrAnalisados := ToAddrAnalisados(allAddrs, addrsBaixados)
 
 	for _, item := range addrAnalisados {
-		fmt.Println("Buscando na API o endereço ", item.Address)
-		addr := GetAddr(item.Address, urlAPI, RawAddr)
+		fmt.Println("Buscando na API o endereço ", item)
+		addr := GetAddr(item, urlAPI, RawAddr)
 
 		if len(addr.Address) > 0 && len(addr.Txs) > 0 && len(addr.Txs) == addr.N_tx {
 			fmt.Println("Salvando o Endereco no MongoDB ")
 			confirmSalve := SalveAddrMongoDB(addr, ConnectionMongoDB, DataBaseAddr, CollectionAddr)
 			if confirmSalve {
-				fmt.Println("Endereco Salvo ", item.Address)
-
+				fmt.Println("Endereco Salvo ", item)
 			} else {
-				fmt.Println("Falha ao salva endereco ", item.Address)
+				fmt.Println("Falha ao salva endereco ", item)
 				return false
 			}
 		}
 	}
-
-	return false
+	return true
 }
 
 // Função consultando um multiAddr e converter para Addr para salvar no Mongo
@@ -323,7 +339,7 @@ func ProcessMAdressesAnalysis(ConnectionMongoDB, DataBaseAnalise, CollectionAnal
 
 	for _, item := range addrAnalisados {
 		fmt.Println("Buscando na API o endereço ", item.Address)
-		Multiaddr := GetMultiAddr([]string{item.Address}, urlAPI, RawAddr,0,0)
+		Multiaddr := GetMultiAddr([]string{item.Address}, urlAPI, RawAddr, 0, 0)
 
 		addr := Model.UnicoEndereco{
 			Hash160:        "",
@@ -371,4 +387,109 @@ func ProcessMAdressesAnalysis(ConnectionMongoDB, DataBaseAnalise, CollectionAnal
 	}
 
 	return false
+}
+
+func SaveAddressInit(addrs []interface{}, ConnectionMongoDB string, DataBaseMongo string, Collection string) bool {
+	if len(addrs) > 0 {
+		cliente, contexto, cancel, errou := Database.Connect(ConnectionMongoDB)
+		if errou != nil {
+			panic(errou)
+		}
+
+		Database.Ping(cliente, contexto)
+		defer Database.Close(cliente, contexto, cancel)
+
+		result, err := Database.InsertMany(cliente, contexto, DataBaseMongo, Collection, addrs)
+		// handle the error
+		if err != nil {
+
+			panic(err)
+		}
+
+		if result.InsertedIDs != nil {
+			return true
+		} else {
+			return false
+		}
+
+	} else {
+		fmt.Println("A lista esta vazio")
+		return false
+	}
+}
+
+func GetAddressInitLimitoffset(limit, offset int64, ConnectionMongoDB string, DataBaseMongo string, Collection string) (result []Model.AddressAnalisado) {
+	client, ctx, cancel, err := Database.Connect(ConnectionMongoDB)
+	if err != nil {
+		panic(err)
+	}
+	defer Database.Close(client, ctx, cancel)
+	var filter, option interface{}
+	filter = bson.M{}
+	option = bson.M{}
+	cursor, err := Database.QueryLimitOffset(client, ctx, DataBaseMongo,
+		Collection, limit, offset, filter, option)
+
+	if err != nil {
+		panic(err)
+	}
+	defer cursor.Close(ctx)
+	for cursor.Next(ctx) {
+		var cluster Model.AddressAnalisado
+
+		if err := cursor.Decode(&cluster); err != nil {
+			log.Fatal(err)
+		}
+		result = append(result, cluster)
+	}
+	return result
+}
+
+func GetAllAddressInit(ConnectionMongoDB, DB1, CollectionCluster string) (result []Model.AddressAnalisado) {
+	var limit int64 = 2000
+	var offset int64 = 0
+	for {
+		addrs := GetAddressInitLimitoffset(limit, offset, ConnectionMongoDB, DB1, CollectionCluster)
+
+		if len(addrs) == 0 {
+			offset = 0
+			break
+		}
+		result = append(result, addrs...)
+		offset = offset + int64(len(addrs))
+	}
+	return result
+}
+
+func GetAddressInitSalvos(ConnectionMongoDB, DB1, CollectionCluster string) map[string]string {
+	result := map[string]string{}
+
+	addrs := GetAllAddressInit(ConnectionMongoDB, DB1, CollectionCluster)
+
+	for _, item := range addrs {
+		_, ok := result[item.Address]
+		if ok {
+			continue
+		} else {
+			result[item.Address] = item.Address
+		}
+	}
+	return result
+}
+
+func GetEnderecosQueSeraoSalvos(enderecosInicias []string, enderecosSalvos map[string]string) []interface{} {
+	listaEnderecosAnalisados := []interface{}{}
+
+	for _, item := range enderecosInicias {
+		_, ok := enderecosSalvos[item]
+		if ok {
+			continue
+		} else {
+			listaEnderecosAnalisados = append(listaEnderecosAnalisados,
+				Model.AddressAnalisado{
+					Address: item,
+				})
+		}
+	}
+	return listaEnderecosAnalisados
 }
